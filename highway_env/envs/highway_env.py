@@ -158,22 +158,37 @@ class NewHighwayEnv(HighwayEnv):
     """
     @classmethod
     def default_config(cls) -> dict:
-        cfg = super().default_config()
-        cfg.update({
-            "simulation_frequency": 5,
-            "lanes_count": 3,
-            "vehicles_count": 20,
-            "duration": 30,  # [s]
-            "ego_spacing": 1.5,
+        config = super().default_config()
+        config.update({
+            "observation": {
+                "type": "Kinematics"
+            },
+            "action": {
+                "type": "DiscreteMetaAction",
+            },
+            "lanes_count": 4,
+            "vehicles_count": 50,
+            "controlled_vehicles": 1,
+            "initial_lane_id": None,
+            "duration": 40,  # [s]
+            "ego_spacing": 2,
+            "vehicles_density": 1,
+            "offroad_terminal": False
         })
-        return cfg
+        return config
 
-    def _create_vehicles(self) -> None:
-        super()._create_vehicles()
-        # Disable collision check for uncontrolled vehicles
-        for vehicle in self.road.vehicles:
-            if vehicle not in self.controlled_vehicles:
-                vehicle.check_collisions = False
+    #def _create_vehicles(self) -> None:
+
+    def _reward(self, action: Action) -> float:
+        """
+        The reward is defined to foster driving at high speed, on the rightmost lanes, and to avoid collisions.
+        :param action: the last action performed
+        :return: the corresponding reward
+        """
+        return 1
+
+    def _rewards(self, action: Action) -> Dict[Text, float]:
+        pass
 
 register(
     id='ma-highway-v0',
