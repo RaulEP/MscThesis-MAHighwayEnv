@@ -18,6 +18,7 @@ _build
 # Test files
 .pytest_cache
 .cache
+.main.ipynb
 
 # Outputs
 **/out/*
