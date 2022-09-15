@@ -238,8 +238,8 @@ class MDPVehicle(ControlledVehicle):
         - If the action is a speed change, choose speed from the allowed discrete range.
         - Else, forward action to the ControlledVehicle handler.
 
-        :param action: a high-level action
-        """
+        :param action: a high-level action """
+
         if action == "FASTER":
             self.speed_index = self.speed_to_index(self.speed) + 1
         elif action == "SLOWER":
@@ -256,8 +256,8 @@ class MDPVehicle(ControlledVehicle):
         Convert an index among allowed speeds to its corresponding speed
 
         :param index: the speed index []
-        :return: the corresponding speed [m/s]
-        """
+        :return: the corresponding speed [m/s] """
+
         return self.target_speeds[index]
 
     def speed_to_index(self, speed: float) -> int:
@@ -267,8 +267,8 @@ class MDPVehicle(ControlledVehicle):
         Assumes a uniform list of target speeds to avoid searching for the closest target speed
 
         :param speed: an input speed [m/s]
-        :return: the index of the closest speed allowed []
-        """
+        :return: the index of the closest speed allowed [] """
+
         x = (speed - self.target_speeds[0]) / (self.target_speeds[-1] - self.target_speeds[0])
         return np.int64(np.clip(np.round(x * (self.target_speeds.size - 1)), 0, self.target_speeds.size - 1))
 
@@ -280,8 +280,8 @@ class MDPVehicle(ControlledVehicle):
         Assumes a uniform list of target speeds to avoid searching for the closest target speed
 
         :param speed: an input speed [m/s]
-        :return: the index of the closest speed allowed []
-        """
+        :return: the index of the closest speed allowed [] """
+
         x = (speed - cls.DEFAULT_TARGET_SPEEDS[0]) / (cls.DEFAULT_TARGET_SPEEDS[-1] - cls.DEFAULT_TARGET_SPEEDS[0])
         return np.int(np.clip(
             np.round(x * (cls.DEFAULT_TARGET_SPEEDS.size - 1)), 0, cls.DEFAULT_TARGET_SPEEDS.size - 1))
@@ -299,8 +299,7 @@ class MDPVehicle(ControlledVehicle):
         :param action_duration: the duration of each action.
         :param trajectory_timestep: the duration between each save of the vehicle state.
         :param dt: the timestep of the simulation
-        :return: the sequence of future states
-        """
+        :return: the sequence of future states """
         states = []
         v = copy.deepcopy(self)
         t = 0
@@ -313,3 +312,61 @@ class MDPVehicle(ControlledVehicle):
                 if (t % int(trajectory_timestep / dt)) == 0:
                     states.append(copy.deepcopy(v))
         return states
+
+class MLCVehicle(ControlledVehicle):
+    
+    DEFAULT_TARGET_SPEEDS = np.linspace(20, 30, 3)
+    MIN_SPEED = 20
+    MAX_SPEED = 30           
+    TAU_ACC = 0.6  # [s]
+    KP_A = 1 / TAU_ACC
+    DELTA_SPEED = 5  # [m/s]
+    TARGET_SPEED = 22 # target speed of vehicle X
+
+    def __init__(self, road: Road, 
+                    position: Vector, 
+                    heading: float = 0,
+                    speed: float = 0,
+                    target_lane_index: LaneIndex = None,
+                    target_speed: float = None,
+                    route: Route = None): 
+                super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
+
+                
+                #self.objective_lane = str(int(self.target_lane_index[0]) + 1) #rightmostlane
+                self.objective_lane = 2
+                #self.lane_index = (self.target_lane_index[0], self.objective_lane, self.target_lane_index[2] )
+                self.target_speed = 25
+
+    @classmethod
+    def create_from(cls, vehicle: "MLCVehicle") -> "MLCVehicle":
+        """
+        Create a new vehicle from an existing one.
+
+        The vehicle dynamics and target dynamics are copied, other properties are default.
+
+        :param vehicle: a vehicle
+        :return: a new vehicle at the same dynamical state
+        """
+        v = cls(vehicle.road, vehicle.position, heading=vehicle.heading, speed=vehicle.speed,
+                target_lane_index=vehicle.target_lane_index, target_speed=vehicle.target_speed,
+                route=vehicle.route)
+        return v
+
+    def plan_route_to(self, destination: str) -> "MLCVehicle":
+        """
+        Plan a route to a destination in the road network
+
+        :param destination: a node in the road network
+        """
+        try:
+            path = self.road.network.shortest_path(self.lane_index[1], destination)
+        except KeyError:
+            path = []
+        if path:
+            self.route = [self.lane_index] + [(path[i], path[i + 1], None) for i in range(len(path) - 1)]
+        else:
+            self.route = [self.lane_index]
+        return self
+
+    
