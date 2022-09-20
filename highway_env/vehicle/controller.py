@@ -315,7 +315,6 @@ class MDPVehicle(ControlledVehicle):
 
 class MLCVehicle(ControlledVehicle):
     
-    DEFAULT_TARGET_SPEEDS = np.linspace(20, 30, 3)
     MIN_SPEED = 20
     MAX_SPEED = 30           
     TAU_ACC = 0.6  # [s]
@@ -331,11 +330,9 @@ class MLCVehicle(ControlledVehicle):
                     target_speed: float = None,
                     route: Route = None): 
                 super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
-
+                self.MIN_SPEED
                 
-                #self.objective_lane = str(int(self.target_lane_index[0]) + 1) #rightmostlane
                 self.objective_lane = 2
-                #self.lane_index = (self.target_lane_index[0], self.objective_lane, self.target_lane_index[2] )
                 self.target_speed = 25
 
     @classmethod

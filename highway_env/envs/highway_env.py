@@ -153,12 +153,9 @@ class HighwayEnvFast(HighwayEnv):
 class MAHighwayEnv(AbstractEnv):    
 
     """
-    A variant of highway-v0 with faster execution:
-        - lower simulation frequency
-        - fewer vehicles in the scene (and fewer lanes, shorter episode duration)
-        - only check collision of controlled vehicles with others
+    add explanation here
     """
-    OBJECTIVE_LANE = 2
+    CONTROLLED_VEHICLE_TYPE = "NULL"
 
     @classmethod
     def default_config(cls) -> dict:
@@ -177,17 +174,29 @@ class MAHighwayEnv(AbstractEnv):
             "duration": 40,  # [s]
             "ego_spacing": 2,
             "vehicles_density": 1,
-            "DLC_config": {},
-            "MLC_Config": {}, 
-            "reward_speed_range": [20, 30],
+            "DLC_config": {
+                "reward_speed_range": [20, 30]
+                        },
+            "MLC_Config": {
+                "reward_speed_range": [20, 30]
+                        }, 
             "normalize_reward": True,
             "offroad_terminal": False,
-            "controlled_vehicle_types": ["highway_env.vehicle.controller.MLCVehicle", "highway_env.vehicle.controller.DLCVehicle"]
+            "controlled_vehicle_types": ["highway_env.vehicle.controller.MLCVehicle", "highway_env.vehicle.controller.DLCVehicle"],
+            "test_controlled": 1
         })
         return config
     
+    #Temporal Classes
+    def set_controlled_vehicle_class(self) -> None :
+        self.CONTROLLED_VEHICLE_TYPE = utils.class_from_path(self.config["controlled_vehicle_types"][self.config['test_controlled']])
+    
+    def get_controlled_vehicle_class(self):
+        return self.CONTROLLED_VEHICLE_TYPE
+
     def _reset(self) -> None:
         self._create_road()
+        self.set_controlled_vehicle_class()
         self._create_vehicles()
 
     def _create_road(self) -> None:
@@ -197,7 +206,7 @@ class MAHighwayEnv(AbstractEnv):
 
     def _create_vehicles(self) -> None:
         """Create some new random vehicles of a given type, and add them on the road."""
-        controlled_vehicle_types = utils.class_from_path(self.config["controlled_vehicle_types"][1]) 
+        controlled_vehicle_types = self.get_controlled_vehicle_class()[1] 
         other_vehicles_type = utils.class_from_path(self.config["other_vehicles_type"])
         other_per_controlled = near_split(self.config["vehicles_count"], num_bins=self.config["controlled_vehicles"])
 
@@ -218,8 +227,7 @@ class MAHighwayEnv(AbstractEnv):
                     lane_id=self.config["initial_lane_id"],
                     spacing=self.config["ego_spacing"]
                 )
-            #creates and add controlled vehicle to road.
-            vehicle = self.action_type.vehicle_class(self.road, vehicle.position, vehicle.heading, vehicle.speed)
+
             self.controlled_vehicles.append(vehicle)
             self.road.vehicles.append(vehicle)
 
