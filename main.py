@@ -2,19 +2,19 @@ from pprint import pprint
 import gym
 import highway_env
 import matplotlib.pyplot as pt
+from highway_env import utils
 
 env = gym.make('ma-highway-v0')
-print("llegue aqui")
 env.reset()
 
 for i in range(5):
-    env.configure({'simulation_frequency':15, 'show_trajectories':True, 'initial_lane_id':1, 'duration':10, 'lanes_count':3})
+    env.configure({'simulation_frequency':60, 'show_trajectories':True, 'initial_lane_id':1, 'duration':10, 'lanes_count':3})
     action = env.action_space.sample()
     obs, reward, terminated, info = env.step(action)
-    #everything = env.step(action)
     env.render(mode='human')
     pprint([obs, reward, terminated, info])
-    #pprint(everything)
+env.close()
+
 """x = env.render('rgb_array')
 pt.plot(x)
 """

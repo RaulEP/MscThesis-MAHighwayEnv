@@ -315,25 +315,20 @@ class MDPVehicle(ControlledVehicle):
 
 class MLCVehicle(ControlledVehicle):
     
-    MIN_SPEED = 20
-    MAX_SPEED = 30           
-    TAU_ACC = 0.6  # [s]
-    KP_A = 1 / TAU_ACC
-    DELTA_SPEED = 5  # [m/s]
-    TARGET_SPEED = 22 # target speed of vehicle X
 
     def __init__(self, road: Road, 
                     position: Vector, 
                     heading: float = 0,
                     speed: float = 0,
-                    target_lane_index: LaneIndex = None,
-                    target_speed: float = None,
-                    route: Route = None): 
+                    target_lane_index: LaneIndex = None, 
+                    route: Route = None, speed_range: List = [15,30], delta_speed = 5, objective_lane = 2, target_speed= 25): 
                 super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
-                self.MIN_SPEED
-                
-                self.objective_lane = 2
-                self.target_speed = 25
+                self.target_speed = target_speed
+                self.objcetive_lane = objective_lane
+                self.MIN_SPEED = speed_range[0]
+                self.MAX_SPEED = speed_range[1]
+                self.DELTA_SPEED = delta_speed
+                #self.MAX_ACCELERATION
 
     @classmethod
     def create_from(cls, vehicle: "MLCVehicle") -> "MLCVehicle":
@@ -367,26 +362,20 @@ class MLCVehicle(ControlledVehicle):
         return self
 
 class DLCVehicle(ControlledVehicle):
-    
-    DEFAULT_TARGET_SPEEDS = np.linspace(20, 30, 3)
-    MIN_SPEED = 20
-    MAX_SPEED = 40           
-    TAU_ACC = 0.6  # [s]
-    KP_A = 1 / TAU_ACC
-    DELTA_SPEED = 5  # [m/s]
-    TARGET_SPEED = 30 # target speed of vehicle X
 
     def __init__(self, road: Road, 
                     position: Vector, 
                     heading: float = 0,
                     speed: float = 0,
-                    target_lane_index: LaneIndex = None,
-                    target_speed: float = None,
-                    route: Route = None): 
+                    target_lane_index: LaneIndex = None, 
+                    route: Route = None, speed_range: List = [20,40], delta_speed = 2.5, objective_lane = "NONE", target_speed= 35): 
                 super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
-
-                self.target_speed = self.TARGET_SPEED
-    
+                self.target_speed = target_speed
+                self.objcetive_lane = objective_lane
+                self.MIN_SPEED = speed_range[0]
+                self.MAX_SPEED = speed_range[1]
+                self.DELTA_SPEED = delta_speed
+                #self.MAX_ACCELERATION
     
     def create_from(cls, vehicle: "DLCVehicle") -> "DLCVehicle":
         """

@@ -206,27 +206,37 @@ class MAHighwayEnv(AbstractEnv):
 
     def _create_vehicles(self) -> None:
         """Create some new random vehicles of a given type, and add them on the road."""
-        controlled_vehicle_types = self.get_controlled_vehicle_class()[1] 
+        controlled_vehicle_types = self.get_controlled_vehicle_class()
         other_vehicles_type = utils.class_from_path(self.config["other_vehicles_type"])
         other_per_controlled = near_split(self.config["vehicles_count"], num_bins=self.config["controlled_vehicles"])
 
         self.controlled_vehicles = []
 
+        vehicle = 0
         for others in other_per_controlled:
             if issubclass(controlled_vehicle_types, MLCVehicle):
                 vehicle = controlled_vehicle_types.create_random(
-                    self.road,
+                    road = self.road,
                     speed=25,
                     lane_id=self.config["initial_lane_id"],
-                    spacing=self.config["ego_spacing"]
+                    spacing=self.config["ego_spacing"], 
                 )
+                vehicle.MIN_SPEED = 15
+                vehicle.MAX_SPEED = 30
+                vehicle.DELTA_SPEED = float(2.5),
+                vehicle.target_speed= 25
             elif issubclass(controlled_vehicle_types, DLCVehicle):
                 vehicle = controlled_vehicle_types.create_random(
                     self.road,
                     speed=35,
                     lane_id=self.config["initial_lane_id"],
-                    spacing=self.config["ego_spacing"]
+                    spacing=self.config["ego_spacing"],
                 )
+                vehicle.MIN_SPEED = 20
+                vehicle.MAX_SPEED = 40
+                vehicle.DELTA_SPEED = float(5),
+                vehicle.target_speed= 40
+                vehicle.objective_lane = "NULL",
 
             self.controlled_vehicles.append(vehicle)
             self.road.vehicles.append(vehicle)
@@ -274,7 +284,7 @@ class MAHighwayEnv(AbstractEnv):
         else:
             in_target_lane = -1
         a_thr = 2.0
-        if  self.vehicle.speed > self.vehicle.TARGET_SPEED:
+        if  self.vehicle.speed > self.vehicle.target_speed:
             target_speed_reward = 1
         else:
             target_speed_reward = 0

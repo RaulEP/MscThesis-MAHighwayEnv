@@ -235,7 +235,6 @@ class DiscreteMetaAction(ActionType):
     @property
     def vehicle_class(self) -> Callable:
         #return functools.partial(MLCVehicle, target_speeds=self.target_speeds)
-        #print(self.env.get_controlled_vehicle_class())
         return DLCVehicle
         
 
