@@ -369,4 +369,54 @@ class MLCVehicle(ControlledVehicle):
             self.route = [self.lane_index]
         return self
 
+class DLCVehicle(ControlledVehicle):
     
+    DEFAULT_TARGET_SPEEDS = np.linspace(20, 30, 3)
+    MIN_SPEED = 20
+    MAX_SPEED = 40           
+    TAU_ACC = 0.6  # [s]
+    KP_A = 1 / TAU_ACC
+    DELTA_SPEED = 5  # [m/s]
+    TARGET_SPEED = 30 # target speed of vehicle X
+
+    def __init__(self, road: Road, 
+                    position: Vector, 
+                    heading: float = 0,
+                    speed: float = 0,
+                    target_lane_index: LaneIndex = None,
+                    target_speed: float = None,
+                    route: Route = None): 
+                super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
+
+                self.target_speed = self.TARGET_SPEED
+    
+    
+    def create_from(cls, vehicle: "DLCVehicle") -> "DLCVehicle":
+        """
+        Create a new vehicle from an existing one.
+
+        The vehicle dynamics and target dynamics are copied, other properties are default.
+
+        :param vehicle: a vehicle
+        :return: a new vehicle at the same dynamical state
+        """
+        v = cls(vehicle.road, vehicle.position, heading=vehicle.heading, speed=vehicle.speed,
+                target_lane_index=vehicle.target_lane_index, target_speed=vehicle.target_speed,
+                route=vehicle.route)
+        return v
+
+    def plan_route_to(self, destination: str) -> "DLCVehicle":
+        """
+        Plan a route to a destination in the road network
+
+        :param destination: a node in the road network
+        """
+        try:
+            path = self.road.network.shortest_path(self.lane_index[1], destination)
+        except KeyError:
+            path = []
+        if path:
+            self.route = [self.lane_index] + [(path[i], path[i + 1], None) for i in range(len(path) - 1)]
+        else:
+            self.route = [self.lane_index]
+        return self

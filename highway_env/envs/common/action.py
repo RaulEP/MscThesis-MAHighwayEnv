@@ -9,7 +9,7 @@ from highway_env.utils import Vector
 from highway_env.vehicle.behavior import IDMVehicle
 from highway_env.vehicle.dynamics import BicycleVehicle
 from highway_env.vehicle.kinematics import Vehicle
-from highway_env.vehicle.controller import MDPVehicle, MLCVehicle
+from highway_env.vehicle.controller import MDPVehicle, MLCVehicle, ControlledVehicle, DLCVehicle
 
 if TYPE_CHECKING:
     from highway_env.envs.common.abstract import AbstractEnv
@@ -220,7 +220,7 @@ class DiscreteMetaAction(ActionType):
         super().__init__(env)
         self.longitudinal = longitudinal
         self.lateral = lateral
-        self.target_speeds = np.array(target_speeds) if target_speeds is not None else MLCVehicle.DEFAULT_TARGET_SPEEDS
+        self.target_speeds = np.array(target_speeds) if target_speeds is not None else MDPVehicle.DEFAULT_TARGET_SPEEDS
         self.actions = self.ACTIONS_ALL if longitudinal and lateral \
             else self.ACTIONS_LONGI if longitudinal \
             else self.ACTIONS_LAT if lateral \
@@ -235,7 +235,8 @@ class DiscreteMetaAction(ActionType):
     @property
     def vehicle_class(self) -> Callable:
         #return functools.partial(MLCVehicle, target_speeds=self.target_speeds)
-        return MLCVehicle
+        return DLCVehicle
+
 
     def act(self, action: int) -> None:
         self.controlled_vehicle.act(self.actions[action]) #return dictionary name of the action id

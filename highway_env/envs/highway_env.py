@@ -10,7 +10,7 @@ from highway_env.road.road import Road, RoadNetwork
 from highway_env.utils import near_split
 from highway_env.vehicle.controller import ControlledVehicle
 from highway_env.vehicle.kinematics import Vehicle
-from highway_env.vehicle.controller import MLCVehicle
+from highway_env.vehicle.controller import MLCVehicle, DLCVehicle
 from typing import List, Tuple, Optional, Callable, TypeVar, Generic, Union, Dict, Text
 
 Observation = np.ndarray
@@ -170,20 +170,19 @@ class MAHighwayEnv(AbstractEnv):
             "action": {
                 "type": "DiscreteMetaAction",
             },
-            "lanes_count": 4,
-            "vehicles_count": 50,
+            "lanes_count": 3,
+            "vehicles_count": 25,
             "controlled_vehicles": 1,
             "initial_lane_id": None,
             "duration": 40,  # [s]
             "ego_spacing": 2,
             "vehicles_density": 1,
-            "collision_reward": -1,    # The reward received when colliding with a vehicle.
-            "high_speed_reward": 0.4,  # The reward received when driving at full speed, linearly mapped to zero for
-                                       # lower speeds according to config["reward_speed_range"].
-            "lane_change_reward": 0,   # The reward received at each lane change action.
+            "DLC_config": {},
+            "MLC_Config": {}, 
             "reward_speed_range": [20, 30],
             "normalize_reward": True,
-            "offroad_terminal": False
+            "offroad_terminal": False,
+            "controlled_vehicle_types": ["highway_env.vehicle.controller.MLCVehicle", "highway_env.vehicle.controller.DLCVehicle"]
         })
         return config
     
@@ -198,17 +197,27 @@ class MAHighwayEnv(AbstractEnv):
 
     def _create_vehicles(self) -> None:
         """Create some new random vehicles of a given type, and add them on the road."""
+        controlled_vehicle_types = utils.class_from_path(self.config["controlled_vehicle_types"][1]) 
         other_vehicles_type = utils.class_from_path(self.config["other_vehicles_type"])
         other_per_controlled = near_split(self.config["vehicles_count"], num_bins=self.config["controlled_vehicles"])
 
         self.controlled_vehicles = []
+
         for others in other_per_controlled:
-            vehicle = MLCVehicle.create_random(
-                self.road,
-                speed=25,
-                lane_id=self.config["initial_lane_id"],
-                spacing=self.config["ego_spacing"]
-            ) 
+            if issubclass(controlled_vehicle_types, MLCVehicle):
+                vehicle = controlled_vehicle_types.create_random(
+                    self.road,
+                    speed=25,
+                    lane_id=self.config["initial_lane_id"],
+                    spacing=self.config["ego_spacing"]
+                )
+            elif issubclass(controlled_vehicle_types, DLCVehicle):
+                vehicle = controlled_vehicle_types.create_random(
+                    self.road,
+                    speed=35,
+                    lane_id=self.config["initial_lane_id"],
+                    spacing=self.config["ego_spacing"]
+                )
             #creates and add controlled vehicle to road.
             vehicle = self.action_type.vehicle_class(self.road, vehicle.position, vehicle.heading, vehicle.speed)
             self.controlled_vehicles.append(vehicle)
