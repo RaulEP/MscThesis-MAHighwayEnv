@@ -376,7 +376,8 @@ class DLCVehicle(ControlledVehicle):
                 self.MAX_SPEED = speed_range[1]
                 self.DELTA_SPEED = delta_speed
                 #self.MAX_ACCELERATION
-    
+
+    @classmethod    
     def create_from(cls, vehicle: "DLCVehicle") -> "DLCVehicle":
         """
         Create a new vehicle from an existing one.

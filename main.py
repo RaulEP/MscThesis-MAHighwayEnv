@@ -4,15 +4,21 @@ import highway_env
 import matplotlib.pyplot as pt
 from highway_env import utils
 
-env = gym.make('ma-highway-v0')
-env.reset()
+#print(utils.lmap(25, [20,30],[0,1]))
 
-for i in range(5):
-    env.configure({'simulation_frequency':60, 'show_trajectories':True, 'initial_lane_id':1, 'duration':10, 'lanes_count':3})
-    action = env.action_space.sample()
-    obs, reward, terminated, info = env.step(action)
-    env.render(mode='human')
-    pprint([obs, reward, terminated, info])
+
+env = gym.make('ma-highway-v0')
+
+
+for trials in range(1):
+    env.configure({'show_trajectories':True, 'initial_lane_id':2, 'lanes_count':3, "vehicles_count": 1, })
+    terminated = False
+    obs = env.reset()
+    while not terminated:
+        action = env.action_space.sample()
+        obs, reward, terminated, info = env.step(action)
+        env.render(mode='human')
+        pprint([obs, reward, terminated, info])
 env.close()
 
 """x = env.render('rgb_array')
