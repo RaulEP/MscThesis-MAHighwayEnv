@@ -1,3 +1,4 @@
+from turtle import width
 from typing import Dict, Text
 
 import numpy as np
@@ -162,28 +163,34 @@ class MAHighwayEnv(AbstractEnv):
         config = super().default_config()
         config.update({
             "observation": {
-                "type": "Kinematics"
+                "type": "Kinematics",
+                "normalize": False,
+                "features": ["x", "y", "vx", "vy"],
             },
             "action": {
                 "type": "DiscreteMetaAction",
             },
             "lanes_count": 3,
-            "vehicles_count": 25,
+            "vehicles_count": 50,
             "controlled_vehicles": 1,
             "initial_lane_id": None,
+            "speed_limit": 35,
             "duration": 40,  # [s]
             "ego_spacing": 2,
+            "road_length": 1000,
             "vehicles_density": 1,
             "DLC_config": {
-                "reward_speed_range": [20, 30]
+                "reward_speed_range": [20, 30],
+                "weights": [5,10,1,1,1],
                         },
             "MLC_Config": {
-                "reward_speed_range": [20, 30]
+                "reward_speed_range": [20, 30],
+                "weights": [5,10,1,1,1]
                         }, 
             "normalize_reward": True,
-            "offroad_terminal": False,
+            "offroad_terminal": True,
             "controlled_vehicle_types": ["highway_env.vehicle.controller.MLCVehicle", "highway_env.vehicle.controller.DLCVehicle"],
-            "test_controlled": 1
+            "test_controlled": 0
         })
         return config
     
@@ -201,7 +208,7 @@ class MAHighwayEnv(AbstractEnv):
 
     def _create_road(self) -> None:
         """Create a road composed of straight adjacent lanes."""
-        self.road = Road(network=RoadNetwork.straight_road_network(self.config["lanes_count"], speed_limit=30),
+        self.road = Road(network=RoadNetwork.straight_road_network(self.config["lanes_count"], speed_limit=self.config["speed_limit"], length=self.config["road_length"]),
                          np_random=self.np_random, record_history=self.config["show_trajectories"])
 
     def _create_vehicles(self) -> None:
@@ -223,8 +230,7 @@ class MAHighwayEnv(AbstractEnv):
                 )
                 vehicle.MIN_SPEED = 15
                 vehicle.MAX_SPEED = 30
-                vehicle.DELTA_SPEED = float(2.5),
-                vehicle.target_speed= 25
+
             elif issubclass(controlled_vehicle_types, DLCVehicle):
                 vehicle = controlled_vehicle_types.create_random(
                     self.road,
@@ -234,9 +240,6 @@ class MAHighwayEnv(AbstractEnv):
                 )
                 vehicle.MIN_SPEED = 20
                 vehicle.MAX_SPEED = 40
-                vehicle.DELTA_SPEED = float(5),
-                vehicle.target_speed= 40
-                vehicle.objective_lane = "NULL",
 
             self.controlled_vehicles.append(vehicle)
             self.road.vehicles.append(vehicle)
@@ -256,11 +259,7 @@ class MAHighwayEnv(AbstractEnv):
         :param action: the action performed by the ego-vehicle
         :return: a tuple (observation, reward, terminated, truncated, info)
         """
-
-        if self.vehicle.lane_index[2] == 2:
-            action = 1
-        else:
-            pass
+        
         return super().step(action)
 
 
@@ -273,30 +272,56 @@ class MAHighwayEnv(AbstractEnv):
         rewards = self._rewards(action)
         sumReward = 0
         for key in rewards:
-            sumReward += rewards[key]
+            sumReward += rewards[key][0] * rewards[key][1]
 
-        return sumReward
+        return sumReward * float(self.vehicle.on_road)
 
     def _rewards(self, action: Action) -> Dict[Text, float]:
-        #neighbours = self.road.network.all_side_lanes(self.vehicle.lane_index)
-        if self.vehicle.lane_index[2] == 2:
-            in_target_lane = 1
-        else:
-            in_target_lane = -1
-        a_thr = 2.0
-        if  self.vehicle.speed > self.vehicle.target_speed:
-            target_speed_reward = 1
-        else:
-            target_speed_reward = 0
-        # Use forward speed rather than speed, see https://github.com/eleurent/highway-env/issues/268
-        return {
-            "~collision_penalty": -1 if self.vehicle.crashed else 1,
-            "~lane change penalty": -1 if action in [0,2] else 0 , 
-            "~sudden aceleration penalty": -1 if self.vehicle.action["acceleration"] >= a_thr else 0,
-            "~target speed reward": target_speed_reward,
-            "~target lane reward": in_target_lane,
-            "on_road_reward": float(self.vehicle.on_road)
-        }
+        
+        #COMMON REWARDS
+
+        collision_penalty = -1 if self.vehicle.crashed else 0
+        lane_change_penalty = -1 if action in [0,2] else 0
+        maintain_speed_range_reward = 0
+
+        #CREATE FUNCTION THAT DETERMINES WHAT TYPE OF VEHICLE IT IS #REVISE
+
+        controlled_vehicle_types = self.get_controlled_vehicle_class()
+        if issubclass(controlled_vehicle_types, MLCVehicle):
+            #MLC Reward Function
+            if self.vehicle.lane_index[2] == 2:
+                proactive_mlc_reward = (1 - (self.vehicle.position[0]/self.config["road_length"]))
+            else:
+                proactive_mlc_reward = self.vehicle.position[0]/self.config["road_length"]
+            #ANALYZE THIS
+            forward_speed = self.vehicle.speed * np.cos(self.vehicle.heading)
+            scaled_speed = utils.lmap(forward_speed, self.config["MLC_Config"]["reward_speed_range"], [0, 1])
+            
+            # Use forward speed rather than speed, see https://github.com/eleurent/highway-env/issues/268
+            return {
+                "proactive_mlc_reward": [proactive_mlc_reward, self.config["MLC_Config"]["weights"][0]],
+                "collision_penalty": [collision_penalty, self.config["MLC_Config"]["weights"][1]],
+                "lane change penalty": [lane_change_penalty ,self.config["MLC_Config"]["weights"][2]],
+                "high_speed_reward": [np.clip(scaled_speed, 0, 1), self.config["MLC_Config"]["weights"][3]],
+            }
+        elif issubclass(controlled_vehicle_types, DLCVehicle):
+            #DLC Reward FUNCTION
+            if  self.vehicle.speed > self.vehicle.target_speed:
+                target_speed_reward = 1
+            else:
+                target_speed_reward = 0
+
+            return {
+                    "collision_penalty": -1 if self.vehicle.crashed else 0,
+                    "lane change penalty": -1 if action in [0,2] else 0 ,
+                    "high_speed_reward": np.clip(scaled_speed, 0, 1),
+                    #"~target speed reward": target_speed_reward,
+                    "on_road_reward": float(self.vehicle.on_road)
+            }
+        
+
+        
+        
         
     def _is_terminated(self) -> bool:
         """The episode is over if the ego vehicle crashed."""
