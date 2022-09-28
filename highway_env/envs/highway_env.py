@@ -1,4 +1,3 @@
-from turtle import width
 from typing import Dict, Text
 
 import numpy as np
@@ -164,7 +163,7 @@ class MAHighwayEnv(AbstractEnv):
         config.update({
             "observation": {
                 "type": "Kinematics",
-                "normalize": False,
+                "normalize": True,
                 "features": ["x", "y", "vx", "vy"],
             },
             "action": {
@@ -180,12 +179,12 @@ class MAHighwayEnv(AbstractEnv):
             "road_length": 1000,
             "vehicles_density": 1,
             "DLC_config": {
-                "reward_speed_range": [20, 30],
-                "weights": [5,10,1,1,1],
+                "reward_speed_range": [20, 40],
+                "weights": [10,5,1,1],
                         },
             "MLC_Config": {
-                "reward_speed_range": [20, 30],
-                "weights": [5,10,1,1,1]
+                "reward_speed_range": [15, 30],
+                "weights": [1,10,1,0.55]
                         }, 
             "normalize_reward": True,
             "offroad_terminal": True,
@@ -273,8 +272,10 @@ class MAHighwayEnv(AbstractEnv):
         sumReward = 0
         for key in rewards:
             sumReward += rewards[key][0] * rewards[key][1]
-
-        return sumReward * float(self.vehicle.on_road)
+        
+        if self.config["normalize_reward"]:
+            reward = utils.lmap(sumReward, [-12, 1.55], [0, 1])
+        return reward * float(self.vehicle.on_road)
 
     def _rewards(self, action: Action) -> Dict[Text, float]:
         
@@ -308,15 +309,19 @@ class MAHighwayEnv(AbstractEnv):
             #DLC Reward FUNCTION
             if  self.vehicle.speed > self.vehicle.target_speed:
                 target_speed_reward = 1
+            elif self.vehicle.speed < self.vehicle.MIN_SPEED:
+                target_speed_reward = -1
             else:
-                target_speed_reward = 0
+                self.vehicle.speed/self.vehicle.MAX_SPEED
+            forward_speed = self.vehicle.speed * np.cos(self.vehicle.heading)
+            scaled_speed = utils.lmap(forward_speed, self.config["DLC_Config"]["reward_speed_range"], [0, 1])
 
             return {
-                    "collision_penalty": -1 if self.vehicle.crashed else 0,
-                    "lane change penalty": -1 if action in [0,2] else 0 ,
-                    "high_speed_reward": np.clip(scaled_speed, 0, 1),
-                    #"~target speed reward": target_speed_reward,
-                    "on_road_reward": float(self.vehicle.on_road)
+                    "proactive_dlc_reward": [target_speed_reward, self.config["MLC_Config"]["weights"][0]],
+                    "collision_penalty": [collision_penalty, self.config["MLC_Config"]["weights"][1]],
+                    "lane change penalty": [lane_change_penalty ,self.config["MLC_Config"]["weights"][2]],
+                    "high_speed_reward": [np.clip(scaled_speed, 0, 1), self.config["MLC_Config"]["weights"][3]],
+
             }
         
 
