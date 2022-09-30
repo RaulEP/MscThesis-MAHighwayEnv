@@ -162,15 +162,18 @@ class MAHighwayEnv(AbstractEnv):
         config = super().default_config()
         config.update({
             "observation": {
-                "type": "Kinematics",
-                "normalize": True,
-                "features": ["x", "y", "vx", "vy"],
-            },
+                "type": "MultiAgentObservation",
+                "observation_config": {
+                    "type": "Kinematics",
+                    "normalize": True,
+                    "features": ["x", "y", "vx", "vy"]}},
             "action": {
-                "type": "DiscreteMetaAction",
-            },
+                 "type": "MultiAgentAction",
+                 "action_config": {
+                      "type": "DiscreteMetaAction",
+            }},
             "lanes_count": 3,
-            "vehicles_count": 50,
+            "vehicles_count": 25,
             "controlled_vehicles": 1,
             "initial_lane_id": None,
             "speed_limit": 35,
@@ -183,8 +186,8 @@ class MAHighwayEnv(AbstractEnv):
                 "weights": [10,5,1,1],
                         },
             "MLC_Config": {
-                "reward_speed_range": [15, 30],
-                "weights": [1,10,1,0.55]
+                "reward_speed_range": [20, 30],
+                "weights": [2,10,1,1]
                         }, 
             "normalize_reward": True,
             "offroad_terminal": True,
@@ -227,7 +230,7 @@ class MAHighwayEnv(AbstractEnv):
                     lane_id=self.config["initial_lane_id"],
                     spacing=self.config["ego_spacing"], 
                 )
-                vehicle.MIN_SPEED = 15
+                vehicle.MIN_SPEED = 20
                 vehicle.MAX_SPEED = 30
 
             elif issubclass(controlled_vehicle_types, DLCVehicle):
