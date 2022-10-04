@@ -173,19 +173,19 @@ class MAHighwayEnv(AbstractEnv):
                       "type": "DiscreteMetaAction",
             }},
             "lanes_count": 3,
-            "vehicles_count": 25,
-            "controlled_vehicles": 1,
             "initial_lane_id": None,
             "speed_limit": 35,
             "duration": 40,  # [s]
             "ego_spacing": 2,
-            "road_length": 1000,
+            "road_length": 10000,
             "vehicles_density": 1,
             "DLC_config": {
+                "count": 10,
                 "reward_speed_range": [20, 40],
                 "weights": [10,5,1,1],
                         },
-            "MLC_Config": {
+            "MLC_config": {
+                "count":15 ,
                 "reward_speed_range": [20, 30],
                 "weights": [2,10,1,1]
                         }, 
@@ -195,17 +195,9 @@ class MAHighwayEnv(AbstractEnv):
             "test_controlled": 0
         })
         return config
-    
-    #Temporal Classes
-    def set_controlled_vehicle_class(self) -> None :
-        self.CONTROLLED_VEHICLE_TYPE = utils.class_from_path(self.config["controlled_vehicle_types"][self.config['test_controlled']])
-    
-    def get_controlled_vehicle_class(self):
-        return self.CONTROLLED_VEHICLE_TYPE
 
     def _reset(self) -> None:
         self._create_road()
-        self.set_controlled_vehicle_class()
         self._create_vehicles()
 
     def _create_road(self) -> None:
@@ -215,26 +207,29 @@ class MAHighwayEnv(AbstractEnv):
 
     def _create_vehicles(self) -> None:
         """Create some new random vehicles of a given type, and add them on the road."""
-        controlled_vehicle_types = self.get_controlled_vehicle_class()
-        other_vehicles_type = utils.class_from_path(self.config["other_vehicles_type"])
-        other_per_controlled = near_split(self.config["vehicles_count"], num_bins=self.config["controlled_vehicles"])
+        controlled_vehicle_types = self.config["controlled_vehicle_types"]
+        vehicle_type_one = utils.class_from_path(controlled_vehicle_types[0])
+        vehicle_type_two = utils.class_from_path(controlled_vehicle_types[1])
+        type_one_per_type_two = near_split(self.config["MLC_config"]["count"], num_bins=self.config["DLC_config"]["count"])
 
         self.controlled_vehicles = []
 
         vehicle = 0
-        for others in other_per_controlled:
-            if issubclass(controlled_vehicle_types, MLCVehicle):
-                vehicle = controlled_vehicle_types.create_random(
-                    road = self.road,
-                    speed=25,
-                    lane_id=self.config["initial_lane_id"],
-                    spacing=self.config["ego_spacing"], 
-                )
-                vehicle.MIN_SPEED = 20
-                vehicle.MAX_SPEED = 30
+        for others in type_one_per_type_two:
+            vehicle = vehicle_type_one.create_random(
+                road = self.road,
+                speed=25,
+                lane_id=self.config["initial_lane_id"],
+                spacing=self.config["ego_spacing"], 
+            )
+            vehicle.MIN_SPEED = 20
+            vehicle.MAX_SPEED = 30
+            
+            self.controlled_vehicles.append(vehicle)
+            self.road.vehicles.append(vehicle)
 
-            elif issubclass(controlled_vehicle_types, DLCVehicle):
-                vehicle = controlled_vehicle_types.create_random(
+            for _ in range(others):
+                vehicle = vehicle_type_two.create_random(
                     self.road,
                     speed=35,
                     lane_id=self.config["initial_lane_id"],
@@ -243,12 +238,7 @@ class MAHighwayEnv(AbstractEnv):
                 vehicle.MIN_SPEED = 20
                 vehicle.MAX_SPEED = 40
 
-            self.controlled_vehicles.append(vehicle)
-            self.road.vehicles.append(vehicle)
-
-            for _ in range(others):
-                vehicle = other_vehicles_type.create_random(self.road, spacing=1 / self.config["vehicles_density"])
-                vehicle.randomize_behavior()
+                self.controlled_vehicles.append(vehicle)
                 self.road.vehicles.append(vehicle)
 
     def step(self, action: Action) -> Tuple[Observation, float, bool, bool, dict]:
