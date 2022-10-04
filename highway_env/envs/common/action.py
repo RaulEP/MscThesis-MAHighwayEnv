@@ -282,14 +282,15 @@ class MultiAgentAction(ActionType):
             self.agents_action_types.append(action_type)
 
     def space(self) -> spaces.Space:
-        return spaces.Tuple([action_type.space() for action_type in self.agents_action_types])
+        #return spaces.Tuple([action_type.space() for action_type in self.agents_action_types])
+        return spaces.MultiDiscrete(nvec=[5 for action_type in self.agents_action_types])
 
     @property
     def vehicle_class(self) -> Callable:
         return action_factory(self.env, self.action_config).vehicle_class
 
     def act(self, action: Action) -> None:
-        assert isinstance(action, tuple)
+        #assert isinstance(action, list)
         for agent_action, action_type in zip(action, self.agents_action_types):
             action_type.act(agent_action)
 

@@ -272,61 +272,70 @@ class MAHighwayEnv(AbstractEnv):
         :return: the corresponding reward
         """
         rewards = self._rewards(action)
-        sumReward = 0
-        for key in rewards:
-            sumReward += rewards[key][0] * rewards[key][1]
-        
-        if self.config["normalize_reward"]:
-            reward = utils.lmap(sumReward, [-12, 1.55], [0, 1])
-        return reward * float(self.vehicle.on_road)
+        vehicles_rewards = []
+        vehicle_id = 0
+        for vehicle in rewards:
+            sumReward = 0
+            for key in vehicle:
+                sumReward += vehicle[key][0] * vehicle[key][1]
+            if self.config["normalize_reward"]:
+                sumReward = utils.lmap(sumReward, [-12, 1.55], [0, 1])
+            total_reward = sumReward * float(self.controlled_vehicles[0].on_road)
+            vehicles_rewards.append(total_reward)
+            vehicle_id += 1
+        average_reward = np.average(vehicles_rewards)
+        return average_reward
 
     def _rewards(self, action: Action) -> Dict[Text, float]:
         
         #COMMON REWARDS
+        controlled_vehicle_rewards = []
+        
+        for v_action in action:
+            collision_penalty = -1 if self.vehicle.crashed else 0
+            lane_change_penalty = -1 if v_action in [0,2] else 0
+            maintain_speed_range_reward = 0
 
-        collision_penalty = -1 if self.vehicle.crashed else 0
-        lane_change_penalty = -1 if action in [0,2] else 0
-        maintain_speed_range_reward = 0
+            #CREATE FUNCTION THAT DETERMINES WHAT TYPE OF VEHICLE IT IS #REVISE
 
-        #CREATE FUNCTION THAT DETERMINES WHAT TYPE OF VEHICLE IT IS #REVISE
-
-        controlled_vehicle_types = self.get_controlled_vehicle_class()
-        if issubclass(controlled_vehicle_types, MLCVehicle):
-            #MLC Reward Function
-            if self.vehicle.lane_index[2] == 2:
-                proactive_mlc_reward = (1 - (self.vehicle.position[0]/self.config["road_length"]))
-            else:
-                proactive_mlc_reward = self.vehicle.position[0]/self.config["road_length"]
-            #ANALYZE THIS
-            forward_speed = self.vehicle.speed * np.cos(self.vehicle.heading)
-            scaled_speed = utils.lmap(forward_speed, self.config["MLC_Config"]["reward_speed_range"], [0, 1])
-            
-            # Use forward speed rather than speed, see https://github.com/eleurent/highway-env/issues/268
-            return {
-                "proactive_mlc_reward": [proactive_mlc_reward, self.config["MLC_Config"]["weights"][0]],
-                "collision_penalty": [collision_penalty, self.config["MLC_Config"]["weights"][1]],
-                "lane change penalty": [lane_change_penalty ,self.config["MLC_Config"]["weights"][2]],
-                "high_speed_reward": [np.clip(scaled_speed, 0, 1), self.config["MLC_Config"]["weights"][3]],
-            }
-        elif issubclass(controlled_vehicle_types, DLCVehicle):
-            #DLC Reward FUNCTION
-            if  self.vehicle.speed > self.vehicle.target_speed:
-                target_speed_reward = 1
-            elif self.vehicle.speed < self.vehicle.MIN_SPEED:
-                target_speed_reward = -1
-            else:
-                self.vehicle.speed/self.vehicle.MAX_SPEED
-            forward_speed = self.vehicle.speed * np.cos(self.vehicle.heading)
-            scaled_speed = utils.lmap(forward_speed, self.config["DLC_Config"]["reward_speed_range"], [0, 1])
-
-            return {
-                    "proactive_dlc_reward": [target_speed_reward, self.config["MLC_Config"]["weights"][0]],
+            controlled_vehicle_types = self.get_controlled_vehicle_class()
+            if issubclass(controlled_vehicle_types, MLCVehicle):
+                #MLC Reward Function
+                if self.vehicle.lane_index[2] == 2:
+                    proactive_mlc_reward = (1 - (self.vehicle.position[0]/self.config["road_length"]))
+                else:
+                    proactive_mlc_reward = self.vehicle.position[0]/self.config["road_length"]
+                #ANALYZE THIS
+                forward_speed = self.vehicle.speed * np.cos(self.vehicle.heading)
+                scaled_speed = utils.lmap(forward_speed, self.config["MLC_Config"]["reward_speed_range"], [0, 1])
+                
+                # Use forward speed rather than speed, see https://github.com/eleurent/highway-env/issues/268
+                controlled_vehicle_rewards.append({
+                    "proactive_mlc_reward": [proactive_mlc_reward, self.config["MLC_Config"]["weights"][0]],
                     "collision_penalty": [collision_penalty, self.config["MLC_Config"]["weights"][1]],
                     "lane change penalty": [lane_change_penalty ,self.config["MLC_Config"]["weights"][2]],
                     "high_speed_reward": [np.clip(scaled_speed, 0, 1), self.config["MLC_Config"]["weights"][3]],
+                })
 
-            }
-        
+            elif issubclass(controlled_vehicle_types, DLCVehicle):
+                #DLC Reward FUNCTION
+                if  self.vehicle.speed > self.vehicle.target_speed:
+                    target_speed_reward = 1
+                elif self.vehicle.speed < self.vehicle.MIN_SPEED:
+                    target_speed_reward = -1
+                else:
+                    self.vehicle.speed/self.vehicle.MAX_SPEED
+                forward_speed = self.vehicle.speed * np.cos(self.vehicle.heading)
+                scaled_speed = utils.lmap(forward_speed, self.config["DLC_Config"]["reward_speed_range"], [0, 1])
+
+                controlled_vehicle_rewards.append({
+                        "proactive_dlc_reward": [target_speed_reward, self.config["MLC_Config"]["weights"][0]],
+                        "collision_penalty": [collision_penalty, self.config["MLC_Config"]["weights"][1]],
+                        "lane change penalty": [lane_change_penalty ,self.config["MLC_Config"]["weights"][2]],
+                        "high_speed_reward": [np.clip(scaled_speed, 0, 1), self.config["MLC_Config"]["weights"][3]],
+
+                })
+        return controlled_vehicle_rewards
 
         
         
