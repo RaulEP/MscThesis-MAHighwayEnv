@@ -173,12 +173,16 @@ class MAHighwayEnv(AbstractEnv):
             }},
             "lanes_count": 3,
             "initial_lane_id": None,
-            "speed_limit": 40,
+            "speed_limit": 20,
             "duration": 40,  # [s]
             "simulation_frequency": 60,  # [Hz]
             "policy_frequency": 1,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
+            "screen_width": 1000, 
+            "screen_height": 150, 
+            "centering_position": [0.3, 0.5], 
+            "scaling": 5.0,
             "vehicles_density": 1,
             "DLC_config": {
                 "count": 5,
@@ -211,7 +215,7 @@ class MAHighwayEnv(AbstractEnv):
         controlled_vehicle_types = self.config["controlled_vehicle_types"]
         vehicle_type_one = utils.class_from_path(controlled_vehicle_types[0])
         vehicle_type_two = utils.class_from_path(controlled_vehicle_types[1])
-        type_one_per_type_two = near_split(self.config["MLC_config"]["count"], num_bins=self.config["DLC_config"]["count"])
+        type_one_per_type_two = near_split(self.config["DLC_config"]["count"], num_bins=self.config["MLC_config"]["count"])
 
         self.controlled_vehicles = []
 
@@ -219,7 +223,6 @@ class MAHighwayEnv(AbstractEnv):
         for others in type_one_per_type_two:
             vehicle = vehicle_type_one.create_random(
                 road = self.road,
-                speed=25,
                 lane_id=self.config["initial_lane_id"],
                 spacing=self.config["ego_spacing"], 
             )
@@ -232,7 +235,6 @@ class MAHighwayEnv(AbstractEnv):
             for _ in range(others):
                 vehicle = vehicle_type_two.create_random(
                     self.road,
-                    speed=25,
                     lane_id=self.config["initial_lane_id"],
                     spacing=self.config["ego_spacing"],
                 )
@@ -340,7 +342,7 @@ class MAHighwayEnv(AbstractEnv):
             if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[i].on_road:
                 return True
         return False
-        
+
     def _is_truncated(self) -> bool:
         """The episode is over if the ego vehicle crashed or the time is out."""
         return self.time >= self.config["duration"]

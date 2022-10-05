@@ -8,10 +8,26 @@ from tqdm.notebook import trange
 import os
 
 env = gym.make('ma-highway-v0')
-DQN_path = os.path.join('Training', 'Saved Models', 'DQN_model')
+env.configure(  {
+                "speed_limit": 20,
+                "vehicles_density": 1,
+                "ego_spacing": 1,
+                "road_length":2000, 
+                "simulation_frequency":60, 
+                "duration":40,
+                "DLC_config": {
+                    "count": 5,
+                    "reward_speed_range": [20, 40],
+                    "weights": [10,5,1,1],
+                        },
+                "MLC_config": {
+                    "count":10 ,
+                    "reward_speed_range": [20, 30],
+                    "weights": [2,10,1,1]
+                        } 
+                })
 
-env.configure({"vehicles_count": 17, "vehicles_density": 2, "simulation_frequency":30, "duration":40, "road_length":2000,  "controlled_vehicles": 8,})
-env.reset()
+DQN_path = os.path.join('Training', 'Saved Models', 'DQN_model')
 
 """
 #MODEL CREATION
@@ -26,11 +42,13 @@ model = A2C('MlpPolicy', env,
 
 #TRAINING
 if TRAIN:
-    model.learn(total_timesteps=int(3e4))
+    model
+    model.learn(total_timesteps=int(10))
     model.save(DQN_path)
     #del model
+"""
 
-
+"""
 ###MODEL TESTING###
 model = DQN.load('Training/Saved Models/DQN_model', env=env)
 for episode in trange(3, desc="Test episodes"):
@@ -44,12 +62,13 @@ env.close()
 """
 
 ###TESTING CODE#####
-for trials in range(10):
+for trials in range(20):
     terminated = False
     obs = env.reset()
     while not terminated:
         action = env.action_space.sample()
         obs, reward, terminated, info = env.step(action)
-        env.render(mode='human')
-        pprint([obs, reward, terminated, info])
+        env.render('human')
+        pprint([obs, reward, terminated])
 env.close()
+
