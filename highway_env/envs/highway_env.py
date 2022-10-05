@@ -155,7 +155,6 @@ class MAHighwayEnv(AbstractEnv):
     """
     add explanation here
     """
-    CONTROLLED_VEHICLE_TYPE = "NULL"
 
     @classmethod
     def default_config(cls) -> dict:
@@ -174,18 +173,20 @@ class MAHighwayEnv(AbstractEnv):
             }},
             "lanes_count": 3,
             "initial_lane_id": None,
-            "speed_limit": 35,
+            "speed_limit": 40,
             "duration": 40,  # [s]
-            "ego_spacing": 2,
-            "road_length": 10000,
+            "simulation_frequency": 60,  # [Hz]
+            "policy_frequency": 1,  # [Hz]
+            "ego_spacing": 1,
+            "road_length": 1000,
             "vehicles_density": 1,
             "DLC_config": {
-                "count": 10,
+                "count": 5,
                 "reward_speed_range": [20, 40],
                 "weights": [10,5,1,1],
                         },
             "MLC_config": {
-                "count":15 ,
+                "count":10 ,
                 "reward_speed_range": [20, 30],
                 "weights": [2,10,1,1]
                         }, 
@@ -231,7 +232,7 @@ class MAHighwayEnv(AbstractEnv):
             for _ in range(others):
                 vehicle = vehicle_type_two.create_random(
                     self.road,
-                    speed=35,
+                    speed=25,
                     lane_id=self.config["initial_lane_id"],
                     spacing=self.config["ego_spacing"],
                 )
@@ -253,7 +254,6 @@ class MAHighwayEnv(AbstractEnv):
         """
         
         return super().step(action)
-
 
     def _reward(self, action: Action) -> float:
         """
@@ -331,15 +331,16 @@ class MAHighwayEnv(AbstractEnv):
                 vehicle_id += 1
 
         return controlled_vehicle_rewards
-
-        
-        
-        
+             
     def _is_terminated(self) -> bool:
-        """The episode is over if the ego vehicle crashed."""
-        return self.vehicle.crashed or \
-            (self.config["offroad_terminal"] and not self.vehicle.on_road)
-
+        """
+        The episode is over if any of the vehicle crashes or its outside of road
+        """
+        for i in range(len(self.controlled_vehicles)):
+            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[i].on_road:
+                return True
+        return False
+        
     def _is_truncated(self) -> bool:
         """The episode is over if the ego vehicle crashed or the time is out."""
         return self.time >= self.config["duration"]
