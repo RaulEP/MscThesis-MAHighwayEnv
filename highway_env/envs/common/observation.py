@@ -12,6 +12,8 @@ from highway_env.road.lane import AbstractLane
 from highway_env.utils import distance_to_circle, Vector
 from highway_env.vehicle.controller import MDPVehicle
 from highway_env.vehicle.kinematics import Vehicle
+from collections import OrderedDict
+
 
 if TYPE_CHECKING:
     from highway_env.envs.common.abstract import AbstractEnv
@@ -482,11 +484,27 @@ class MultiAgentObservation(ObservationType):
             self.agents_observation_types.append(obs_type)
 
     def space(self) -> spaces.Space:
-        return spaces.Tuple([obs_type.space() for obs_type in self.agents_observation_types])
+        spaces_dict = self.convert_obs_to_dict()
+        #return spaces.tuple([obs_type.space() for obs_type in self.agents_observation_types]) #LEGACY CODE
+        return spaces.Dict(spaces_dict)
 
-    def observe(self) -> tuple:
-        return tuple(obs_type.observe() for obs_type in self.agents_observation_types)
-
+    def observe(self):
+        spaces_dict = self.convert_obs_to_dict()
+        #return tuple(obs_type.observe() for obs_type in self.agents_observation_types) #LEGACY CODE
+        key = 0
+        for val in self.agents_observation_types:
+            obs = val.observe()
+            spaces_dict[key] = val.observe()
+            key += 1
+        return spaces_dict
+        
+    def convert_obs_to_dict(self):
+        keys = range(len(self.agents_observation_types))
+        values = []
+        for obs_type in self.agents_observation_types:
+            values.append(obs_type.space())
+        space_dict = OrderedDict(zip(keys, values))
+        return space_dict
 
 class TupleObservation(ObservationType):
     def __init__(self,
