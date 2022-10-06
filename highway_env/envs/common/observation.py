@@ -493,17 +493,18 @@ class MultiAgentObservation(ObservationType):
         #return tuple(obs_type.observe() for obs_type in self.agents_observation_types) #LEGACY CODE
         key = 0
         for val in self.agents_observation_types:
-            obs = val.observe()
-            spaces_dict[key] = val.observe()
+            spaces_dict[str(key)] = val.observe()
             key += 1
         return spaces_dict
         
     def convert_obs_to_dict(self):
-        keys = range(len(self.agents_observation_types))
+        #keys = [i for i in range(len(self.agents_observation_types))]
         values = []
         for obs_type in self.agents_observation_types:
             values.append(obs_type.space())
-        space_dict = OrderedDict(zip(keys, values))
+        space_dict = OrderedDict()
+        for key in range(len(self.agents_observation_types)):
+            space_dict[str(key)] = values[key]
         return space_dict
 
 class TupleObservation(ObservationType):
