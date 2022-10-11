@@ -232,6 +232,7 @@ class AbstractEnv(gym.Env):
         terminated = self._is_terminated()
         truncated = self._is_truncated()
         info = self._info(obs, action)
+        info["average_reward"] = reward
 
         return obs, reward, terminated, truncated, info
 

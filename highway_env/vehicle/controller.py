@@ -319,8 +319,8 @@ class MLCVehicle(ControlledVehicle):
     def __init__(self, road: Road, 
                     position: Vector, heading: float = 0,
                     speed: float = 0, target_lane_index: LaneIndex = None, 
-                    route: Route = None, speed_range: List = [20,30], 
-                    delta_speed = 2.5, objective_lane = 2, target_speed= 25): 
+                    route: Route = None, speed_range: List = [17,25], 
+                    delta_speed = 2.5, objective_lane = 2, target_speed=22): 
                 super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
                 self.target_speed = target_speed
                 self.objcetive_lane = objective_lane
@@ -365,11 +365,10 @@ class DLCVehicle(ControlledVehicle):
                     position: Vector, 
                     heading: float = 0, speed: float = 0,
                     target_lane_index: LaneIndex = None, 
-                    route: Route = None, speed_range: List = [20,40], 
-                    delta_speed = 5.0, objective_lane = "NONE", target_speed= 35): 
+                    route: Route = None, speed_range: List = [17,33], 
+                    delta_speed = 2.5, target_speed= 27): 
                 super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
                 self.target_speed = target_speed
-                self.objcetive_lane = objective_lane
                 self.MIN_SPEED = speed_range[0]
                 self.MAX_SPEED = speed_range[1]
                 self.DELTA_SPEED = delta_speed

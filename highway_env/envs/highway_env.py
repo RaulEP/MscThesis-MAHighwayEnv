@@ -155,6 +155,8 @@ class MAHighwayEnv(AbstractEnv):
     """
     add explanation here
     """
+    vehicle_crashed = False
+    vehicles_speed = []
 
     @classmethod
     def default_config(cls) -> dict:
@@ -173,26 +175,26 @@ class MAHighwayEnv(AbstractEnv):
             }},
             "lanes_count": 3,
             "initial_lane_id": None,
-            "speed_limit": 20,
+            "speed_limit": 33,
             "duration": 40,  # [s]
             "simulation_frequency": 60,  # [Hz]
             "policy_frequency": 1,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
-            "screen_width": 1000, 
+            "screen_width": 1500, 
             "screen_height": 150, 
             "centering_position": [0.3, 0.5], 
             "scaling": 5.0,
             "vehicles_density": 1,
             "DLC_config": {
-                "count": 5,
-                "reward_speed_range": [20, 40],
-                "weights": [10,5,1,1],
+                    "count": 3,
+                    "reward_speed_range": [23, 31],
+                    "weights": [2,10,1,1],
                         },
             "MLC_config": {
-                "count":10 ,
-                "reward_speed_range": [20, 30],
-                "weights": [2,10,1,1]
+                    "count":5 ,
+                    "reward_speed_range": [19, 23],
+                    "weights": [2,10,1,1],
                         }, 
             "normalize_reward": True,
             "offroad_terminal": True,
@@ -202,6 +204,7 @@ class MAHighwayEnv(AbstractEnv):
         return config
 
     def _reset(self) -> None:
+        self.vehicle_crashed = False
         self._create_road()
         self._create_vehicles()
 
@@ -226,8 +229,6 @@ class MAHighwayEnv(AbstractEnv):
                 lane_id=self.config["initial_lane_id"],
                 spacing=self.config["ego_spacing"], 
             )
-            vehicle.MIN_SPEED = 20
-            vehicle.MAX_SPEED = 30
             
             self.controlled_vehicles.append(vehicle)
             self.road.vehicles.append(vehicle)
@@ -238,8 +239,6 @@ class MAHighwayEnv(AbstractEnv):
                     lane_id=self.config["initial_lane_id"],
                     spacing=self.config["ego_spacing"],
                 )
-                vehicle.MIN_SPEED = 20
-                vehicle.MAX_SPEED = 40
 
                 self.controlled_vehicles.append(vehicle)
                 self.road.vehicles.append(vehicle)
@@ -271,8 +270,8 @@ class MAHighwayEnv(AbstractEnv):
             for key in vehicle:
                 sumReward += vehicle[key][0] * vehicle[key][1]
             if self.config["normalize_reward"]:
-                sumReward = utils.lmap(sumReward, [-12, 1.55], [0, 1])
-            total_reward = sumReward * float(self.controlled_vehicles[0].on_road)
+                sumReward = utils.lmap(sumReward, [-11, 3], [0, 1])
+            total_reward = sumReward * float(self.controlled_vehicles[vehicle_id].on_road)
             vehicles_rewards.append(total_reward)
             vehicle_id += 1
         average_reward = np.average(vehicles_rewards)
@@ -284,15 +283,20 @@ class MAHighwayEnv(AbstractEnv):
         vehicle_id = 0
         controlled_vehicle_rewards = []
         for v_action in action:
+                if len(self.vehicles_speed) == 0:
+                    for i in range(len(self.controlled_vehicles)):
+                        self.vehicles_speed.append(i)
+                else:
+                    self.vehicles_speed[vehicle_id] = self.controlled_vehicles[vehicle_id].speed
                 collision_penalty = -1 if self.controlled_vehicles[vehicle_id].crashed else 0
                 lane_change_penalty = -1 if v_action in [0,2] else 0
                 v_class = type(self.controlled_vehicles[vehicle_id])
                 if issubclass(v_class, MLCVehicle):
                     #MLC Reward Function
-                    if self.vehicle.lane_index[2] == 2:
+                    if self.controlled_vehicles[vehicle_id].lane_index[2] == 2:
                         proactive_mlc_reward = (1 - (self.controlled_vehicles[vehicle_id].position[0]/self.config["road_length"]))
                     else:
-                        proactive_mlc_reward = self.controlled_vehicles[vehicle_id].position[0]/self.config["road_length"]
+                        proactive_mlc_reward = -self.controlled_vehicles[vehicle_id].position[0]/self.config["road_length"]
                     
                     #ANALYZE THIS
                     forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
@@ -312,11 +316,10 @@ class MAHighwayEnv(AbstractEnv):
                     #DLC Reward FUNCTION
                     if  self.controlled_vehicles[vehicle_id].speed > self.controlled_vehicles[vehicle_id].target_speed:
                         target_speed_reward = 1
-                    elif self.controlled_vehicles[vehicle_id].speed < self.controlled_vehicles[vehicle_id].MIN_SPEED:
-                        target_speed_reward = -1
                     else:
-                        target_speed_reward = self.controlled_vehicles[vehicle_id].speed/self.controlled_vehicles[vehicle_id].MAX_SPEED
+                        target_speed_reward = (self.controlled_vehicles[vehicle_id].speed - self.controlled_vehicles[vehicle_id].MIN_SPEED) /(self.controlled_vehicles[vehicle_id].MAX_SPEED - self.controlled_vehicles[vehicle_id].MIN_SPEED)
 
+                   
                     #ANALYZE THIS    
                     forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
                     scaled_speed = utils.lmap(forward_speed, self.config["DLC_config"]["reward_speed_range"], [0, 1])
@@ -324,15 +327,41 @@ class MAHighwayEnv(AbstractEnv):
                     controlled_vehicle_rewards.append(
 
                         {
-                            "proactive_dlc_reward": [target_speed_reward, self.config["MLC_config"]["weights"][0]],
-                            "collision_penalty": [collision_penalty, self.config["MLC_config"]["weights"][1]],
-                            "lane change penalty": [lane_change_penalty ,self.config["MLC_config"]["weights"][2]],
-                            "high_speed_reward": [np.clip(scaled_speed, 0, 1), self.config["MLC_config"]["weights"][3]],
+                            "target_speed_reward": [target_speed_reward, self.config["DLC_config"]["weights"][0]],
+                            "collision_penalty": [collision_penalty, self.config["DLC_config"]["weights"][1]],
+                            "lane change penalty": [lane_change_penalty ,self.config["DLC_config"]["weights"][2]],
+                            "high_speed_reward": [np.clip(scaled_speed, 0, 1), self.config["DLC_config"]["weights"][3]],
                         })
                 
                 vehicle_id += 1
 
         return controlled_vehicle_rewards
+
+    
+    def _info(self, obs: Observation, action: Action) -> dict:
+        info = {
+            "vehicles_speed": self.vehicles_speed,
+            "crashed": self.vehicle_crashed,
+            "action": action,
+        }
+
+        try:
+            info["rewards"] = self._rewards(action)
+
+        except NotImplementedError:
+            pass
+        return info
+
+
+    def _cost(self, action: Action) -> float:
+        """
+        A constraint metric, for budgeted MDP.
+
+        If a constraint is defined, it must be used with an alternate reward that doesn't contain it as a penalty.
+        :param action: the last action performed
+        :return: the constraint signal, the alternate (constraint-free) reward
+        """
+        raise NotImplementedError
              
     def _is_terminated(self) -> bool:
         """
@@ -340,6 +369,7 @@ class MAHighwayEnv(AbstractEnv):
         """
         for i in range(len(self.controlled_vehicles)):
             if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[i].on_road:
+                self.vehicle_crashed = True
                 return True
         return False
 
