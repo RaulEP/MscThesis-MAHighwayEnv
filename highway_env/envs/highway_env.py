@@ -205,6 +205,7 @@ class MAHighwayEnv(AbstractEnv):
 
     def _reset(self) -> None:
         self.vehicle_crashed = False
+        self.vehicles_speed = []
         self._create_road()
         self._create_vehicles()
 
@@ -317,9 +318,9 @@ class MAHighwayEnv(AbstractEnv):
                     if  self.controlled_vehicles[vehicle_id].speed > self.controlled_vehicles[vehicle_id].target_speed:
                         target_speed_reward = 1
                     else:
-                        target_speed_reward = (self.controlled_vehicles[vehicle_id].speed - self.controlled_vehicles[vehicle_id].MIN_SPEED) /(self.controlled_vehicles[vehicle_id].MAX_SPEED - self.controlled_vehicles[vehicle_id].MIN_SPEED)
+                        target_speed_reward = (self.controlled_vehicles[vehicle_id].speed - self.config["DLC_config"]["reward_speed_range"][0]) \
+                             /(self.config["DLC_config"]["reward_speed_range"][1] - self.config["DLC_config"]["reward_speed_range"][0])
 
-                   
                     #ANALYZE THIS    
                     forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
                     scaled_speed = utils.lmap(forward_speed, self.config["DLC_config"]["reward_speed_range"], [0, 1])
