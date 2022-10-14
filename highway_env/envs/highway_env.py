@@ -186,6 +186,7 @@ class MAHighwayEnv(AbstractEnv):
             "centering_position": [0.3, 0.5], 
             "scaling": 5.0,
             "vehicles_density": 1,
+            "normalization_range": [5, 5],
             "DLC_config": {
                     "count": 3,
                     "reward_speed_range": [23, 31],
@@ -271,7 +272,7 @@ class MAHighwayEnv(AbstractEnv):
             for key in vehicle:
                 sumReward += vehicle[key][0] * vehicle[key][1]
             if self.config["normalize_reward"]:
-                sumReward = utils.lmap(sumReward, [-11, 3], [0, 1])
+                sumReward = utils.lmap(sumReward, self.config["normalization_range"], [0, 1])
             total_reward = sumReward * float(self.controlled_vehicles[vehicle_id].on_road)
             vehicles_rewards.append(total_reward)
             vehicle_id += 1
@@ -353,16 +354,6 @@ class MAHighwayEnv(AbstractEnv):
             pass
         return info
 
-
-    def _cost(self, action: Action) -> float:
-        """
-        A constraint metric, for budgeted MDP.
-
-        If a constraint is defined, it must be used with an alternate reward that doesn't contain it as a penalty.
-        :param action: the last action performed
-        :return: the constraint signal, the alternate (constraint-free) reward
-        """
-        raise NotImplementedError
              
     def _is_terminated(self) -> bool:
         """
