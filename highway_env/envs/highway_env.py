@@ -12,6 +12,7 @@ from highway_env.vehicle.controller import ControlledVehicle
 from highway_env.vehicle.kinematics import Vehicle
 from highway_env.vehicle.controller import MLCVehicle, DLCVehicle
 from typing import List, Tuple, Optional, Callable, TypeVar, Generic, Union, Dict, Text
+import math
 
 Observation = np.ndarray
 
@@ -177,7 +178,7 @@ class MAHighwayEnv(AbstractEnv):
             "initial_lane_id": None,
             "speed_limit": 33,
             "duration": 40,  # [s]
-            "simulation_frequency": 60,  # [Hz]
+            "simulation_frequency": 15,  # [Hz]
             "policy_frequency": 1,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
@@ -186,16 +187,16 @@ class MAHighwayEnv(AbstractEnv):
             "centering_position": [0.3, 0.5], 
             "scaling": 5.0,
             "vehicles_density": 1,
-            "normalization_range": [5, 5],
+            "normalization_range": [-51, 14],
             "DLC_config": {
-                    "count": 3,
-                    "reward_speed_range": [23, 31],
-                    "weights": [2,10,1,1],
+                    "count": 5,
+                    "reward_speed_range": [23, 28], #speed range should be bellow target speed > 28.
+                    "weights": [5,50,1,1,0.5],
                         },
             "MLC_config": {
                     "count":5 ,
                     "reward_speed_range": [19, 23],
-                    "weights": [2,10,1,1],
+                    "weights": [5,50,1,1,0.5],
                         }, 
             "normalize_reward": True,
             "offroad_terminal": True,
@@ -283,8 +284,17 @@ class MAHighwayEnv(AbstractEnv):
         
         #COMMON REWARDS
         vehicle_id = 0
+        time_headway_threshold = 1
         controlled_vehicle_rewards = []
         for v_action in action:
+                front_vehicle, tail_vehicle = self.road.neighbour_vehicles(self.controlled_vehicles[v_action])
+                time_headway_reward = 0 
+                if not(front_vehicle is None):                    
+                    front_vehicle_distance = self.controlled_vehicles[v_action].front_distance_to(front_vehicle)
+                    if not(front_vehicle_distance > 100):
+                        time_headway_reward = math.log(front_vehicle_distance/(self.controlled_vehicles[v_action].speed*time_headway_threshold))
+                        #time_headway_reward = math.log(100/(17*time_headway_threshold))
+
                 if len(self.vehicles_speed) == 0:
                     for i in range(len(self.controlled_vehicles)):
                         self.vehicles_speed.append(i)
@@ -311,7 +321,8 @@ class MAHighwayEnv(AbstractEnv):
                         "proactive_mlc_reward": [proactive_mlc_reward, self.config["MLC_config"]["weights"][0]],
                         "collision_penalty": [collision_penalty, self.config["MLC_config"]["weights"][1]],
                         "lane change penalty": [lane_change_penalty ,self.config["MLC_config"]["weights"][2]],
-                        "high_speed_reward": [np.clip(scaled_speed, 0, 1), self.config["MLC_config"]["weights"][3]],
+                        "speed_range_reward": [np.clip(scaled_speed, 0, 1), self.config["MLC_config"]["weights"][3]],
+                        "time_headway_reward": [time_headway_reward, self.config["MLC_config"]["weights"][4]]
                         })
 
                 elif issubclass(v_class, DLCVehicle):
@@ -332,7 +343,8 @@ class MAHighwayEnv(AbstractEnv):
                             "target_speed_reward": [target_speed_reward, self.config["DLC_config"]["weights"][0]],
                             "collision_penalty": [collision_penalty, self.config["DLC_config"]["weights"][1]],
                             "lane change penalty": [lane_change_penalty ,self.config["DLC_config"]["weights"][2]],
-                            "high_speed_reward": [np.clip(scaled_speed, 0, 1), self.config["DLC_config"]["weights"][3]],
+                            "speed_range_reward": [np.clip(scaled_speed, 0, 1), self.config["DLC_config"]["weights"][3]],
+                            "time_headway_reward": [time_headway_reward, self.config["DLC_config"]["weights"][4]]
                         })
                 
                 vehicle_id += 1
