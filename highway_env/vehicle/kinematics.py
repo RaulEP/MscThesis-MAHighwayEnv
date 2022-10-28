@@ -72,10 +72,16 @@ class Vehicle(RoadObject):
         _id = lane_id if lane_id is not None else road.np_random.choice(len(road.network.graph[_from][_to]))
         lane = road.network.get_lane((_from, _to, _id))
         if speed is None:
+            if str(cls) == "<class 'highway_env.vehicle.controller.DLCVehicle'>":
+                speed = road.np_random.uniform(23, 25)
+            elif str(cls) == "<class 'highway_env.vehicle.controller.MLCVehicle'>":
+                speed = road.np_random.uniform(20, 22 )
+            """
             if lane.speed_limit is not None:
                 speed = road.np_random.uniform(0.7*lane.speed_limit, 0.8*lane.speed_limit)
             else:
                 speed = road.np_random.uniform(Vehicle.DEFAULT_INITIAL_SPEEDS[0], Vehicle.DEFAULT_INITIAL_SPEEDS[1])
+            """
         default_spacing = 12+1.0*speed
         offset = spacing * default_spacing * np.exp(-5 / 40 * len(road.network.graph[_from][_to]))
         x0 = np.max([lane.local_coordinates(v.position)[0] for v in road.vehicles]) \
