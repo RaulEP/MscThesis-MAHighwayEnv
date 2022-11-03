@@ -287,14 +287,13 @@ class MAHighwayEnv(AbstractEnv):
         time_headway_threshold = 1
         controlled_vehicle_rewards = []
         for v_action in action:
-                front_vehicle, tail_vehicle = self.road.neighbour_vehicles(self.controlled_vehicles[v_action])
+                front_vehicle, _ = self.road.neighbour_vehicles(self.controlled_vehicles[vehicle_id])
                 time_headway_reward = 0 
                 if not(front_vehicle is None):                    
-                    front_vehicle_distance = self.controlled_vehicles[v_action].front_distance_to(front_vehicle)
-                    if not(front_vehicle_distance > 100):
-                        time_headway_reward = math.log(front_vehicle_distance/(self.controlled_vehicles[v_action].speed*time_headway_threshold))
-                        #time_headway_reward = math.log(100/(17*time_headway_threshold))
-
+                    front_vehicle_distance = self.controlled_vehicles[vehicle_id].front_distance_to(front_vehicle)
+                    if (front_vehicle_distance <= 100) and (front_vehicle_distance > self.controlled_vehicles[vehicle_id].speed):
+                        time_hr = front_vehicle_distance/(self.controlled_vehicles[vehicle_id].speed*time_headway_threshold)
+                        time_headway_reward = utils.lmap(time_hr, [0,5.88], [0, 1])
                 if len(self.vehicles_speed) == 0:
                     for i in range(len(self.controlled_vehicles)):
                         self.vehicles_speed.append(i)
