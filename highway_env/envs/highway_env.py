@@ -191,12 +191,12 @@ class MAHighwayEnv(AbstractEnv):
             "DLC_config": {
                     "count": 5,
                     "reward_speed_range": [23, 28], #speed range should be bellow target speed > 28.
-                    "weights": [5,50,1,1,0.5],
+                    "weights": [10,100,1,1,1,2],
                         },
             "MLC_config": {
                     "count":5 ,
                     "reward_speed_range": [19, 23],
-                    "weights": [5,50,1,1,0.5],
+                    "weights":  [10,100,1,1,1,2],
                         }, 
             "normalize_reward": True,
             "offroad_terminal": True,
@@ -288,7 +288,7 @@ class MAHighwayEnv(AbstractEnv):
         controlled_vehicle_rewards = []
         for v_action in action:
                 front_vehicle, _ = self.road.neighbour_vehicles(self.controlled_vehicles[vehicle_id])
-                time_headway_reward = 0 
+                time_headway_reward = 0
                 if not(front_vehicle is None):                    
                     front_vehicle_distance = self.controlled_vehicles[vehicle_id].front_distance_to(front_vehicle)
                     if (front_vehicle_distance <= 100) and (front_vehicle_distance > self.controlled_vehicles[vehicle_id].speed):
@@ -306,9 +306,12 @@ class MAHighwayEnv(AbstractEnv):
                     #MLC Reward Function
                     if self.controlled_vehicles[vehicle_id].lane_index[2] == 2:
                         proactive_mlc_reward = (1 - (self.controlled_vehicles[vehicle_id].position[0]/self.config["road_length"]))
+                        target_lane_reward = 1
                     else:
                         proactive_mlc_reward = -self.controlled_vehicles[vehicle_id].position[0]/self.config["road_length"]
+                        target_lane_reward = 0
                     
+
                     #ANALYZE THIS
                     forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
                     scaled_speed = utils.lmap(forward_speed, self.config["MLC_config"]["reward_speed_range"], [0, 1])
@@ -321,7 +324,8 @@ class MAHighwayEnv(AbstractEnv):
                         "collision_penalty": [collision_penalty, self.config["MLC_config"]["weights"][1]],
                         "lane change penalty": [lane_change_penalty ,self.config["MLC_config"]["weights"][2]],
                         "speed_range_reward": [np.clip(scaled_speed, 0, 1), self.config["MLC_config"]["weights"][3]],
-                        "time_headway_reward": [time_headway_reward, self.config["MLC_config"]["weights"][4]]
+                        "time_headway_reward": [time_headway_reward, self.config["MLC_config"]["weights"][4]],
+                        "target_lane_reward": [target_lane_reward, self.config["MLC_config"]["weights"][5]] #create in config
                         })
 
                 elif issubclass(v_class, DLCVehicle):
@@ -332,6 +336,12 @@ class MAHighwayEnv(AbstractEnv):
                         target_speed_reward = (self.controlled_vehicles[vehicle_id].speed - self.config["DLC_config"]["reward_speed_range"][0]) \
                              /(self.config["DLC_config"]["reward_speed_range"][1] - self.config["DLC_config"]["reward_speed_range"][0])
 
+                    if self.controlled_vehicles[vehicle_id].destination[0] >= 10000:
+                        finish_road_reward = 1
+                    else:
+                        finish_road_reward = 0
+                    #test = utils.lmap(350, [600, 300], [0, 1])
+
                     #ANALYZE THIS    
                     forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
                     scaled_speed = utils.lmap(forward_speed, self.config["DLC_config"]["reward_speed_range"], [0, 1])
@@ -339,11 +349,12 @@ class MAHighwayEnv(AbstractEnv):
                     controlled_vehicle_rewards.append(
 
                         {
-                            "target_speed_reward": [target_speed_reward, self.config["DLC_config"]["weights"][0]],
-                            "collision_penalty": [collision_penalty, self.config["DLC_config"]["weights"][1]],
-                            "lane change penalty": [lane_change_penalty ,self.config["DLC_config"]["weights"][2]],
-                            "speed_range_reward": [np.clip(scaled_speed, 0, 1), self.config["DLC_config"]["weights"][3]],
-                            "time_headway_reward": [time_headway_reward, self.config["DLC_config"]["weights"][4]]
+                        "target_speed_reward": [target_speed_reward, self.config["DLC_config"]["weights"][0]],
+                        "collision_penalty": [collision_penalty, self.config["DLC_config"]["weights"][1]],
+                        "lane change penalty": [lane_change_penalty ,self.config["DLC_config"]["weights"][2]],
+                        "speed_range_reward": [np.clip(scaled_speed, 0, 1), self.config["DLC_config"]["weights"][3]],
+                        "time_headway_reward": [time_headway_reward, self.config["DLC_config"]["weights"][4]],
+                        "finish_road_reward": [finish_road_reward, self.config["DLC_config"]["weights"][5]]
                         })
                 
                 vehicle_id += 1
