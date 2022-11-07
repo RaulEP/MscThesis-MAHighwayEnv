@@ -16,17 +16,7 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 if __name__ == "__main__":
 
-    env = SubprocVecEnv([
-                    lambda: gym.make('ma-highway-v0'),
-                    lambda: gym.make('ma-highway-v0'),
-                    lambda: gym.make('ma-highway-v0'),
-                    lambda: gym.make('ma-highway-v0'),
-                    lambda: gym.make('ma-highway-v0'),
-                    lambda: gym.make('ma-highway-v0'),
-                    lambda: gym.make('ma-highway-v0'),
-                    lambda: gym.make('ma-highway-v0'),
-    ]) 
-    env = VecMonitor(env)
+    env = gym.make('ma-highway-v0')
 
     log_path = 'highway_a2c/'
     A2C_path = os.path.join('Training', 'Saved Models', 'A2C_model')
@@ -41,18 +31,18 @@ if __name__ == "__main__":
                     best_model_save_path=best_model_path, #after 10000 steps is going to check and save in this path
                     verbose=1)
 
-    tmp_path = "logger/ppo/"
+    tmp_path = "logger/a2c/"
 
     # set up logger
     new_logger = configure(tmp_path, ["stdout"])
 
-    model = A2C('MultiInputPolicy', env, 
-                tensorboard_log="highway_a2c/1",
-                verbose=True,
-                seed=3,
-                normalize_advantage=True)
-
-    # Set new logger
-    model.set_logger(new_logger)
-    model.learn(total_timesteps=int(100000), callback=eval_callback)
-    model.save(A2C_path)
+    ###MODEL TESTING###
+    model = A2C.load('Training/Saved Models/Best_Model/best_model', env=env)
+    #model = A2C.load('Training/Saved Models/A2C_model', env=env)
+    for episode in trange(10, desc="Test episodes"):
+        obs, done = env.reset(), False
+        while not done:
+            action, _ = model.predict(obs, deterministic=True)
+            obs, reward, done, info = env.step(action)
+            env.render('human')
+    env.close()
