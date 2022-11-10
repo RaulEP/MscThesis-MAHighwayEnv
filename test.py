@@ -37,9 +37,9 @@ if __name__ == "__main__":
     new_logger = configure(tmp_path, ["stdout"])
 
     ###MODEL TESTING###
-    model = A2C.load('Training/Saved Models/Best_Model/best_model', env=env)
+    model = A2C.load('Training/Saved Models/best_model', env=env)
     #model = A2C.load('Training/Saved Models/A2C_model', env=env)
-    for episode in trange(10, desc="Test episodes"):
+    for episode in trange(2, desc="Test episodes"):
         obs, done = env.reset(), False
         while not done:
             action, _ = model.predict(obs, deterministic=True)
