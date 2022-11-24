@@ -43,7 +43,7 @@ class MAHighwayEnv(AbstractEnv):
             "initial_lane_id": None,
             "speed_limit": 33,
             "duration": 40,  # [s]
-            "simulation_frequency": 120,  # [Hz]
+            "simulation_frequency": 15,  # [Hz]
             "policy_frequency": 1,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
