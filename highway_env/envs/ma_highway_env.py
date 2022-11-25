@@ -43,8 +43,8 @@ class MAHighwayEnv(AbstractEnv):
             "initial_lane_id": None,
             "speed_limit": 33,
             "duration": 40,  # [s]
-            "simulation_frequency": 15,  # [Hz]
-            "policy_frequency": 1,  # [Hz]
+            "simulation_frequency": 60,  # [Hz]
+            "policy_frequency": 5,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
             "screen_width": 1800, 
@@ -76,6 +76,8 @@ class MAHighwayEnv(AbstractEnv):
         self.vehicles_speed = []
         self._create_road()
         self._create_vehicles()
+        for i in range(len(self.controlled_vehicles)):
+            self.vehicles_speed.append(self.controlled_vehicles[i].speed)
 
     def _create_road(self) -> None:
         """Create a road composed of straight adjacent lanes."""
@@ -152,6 +154,10 @@ class MAHighwayEnv(AbstractEnv):
         vehicle_id = 0
         time_headway_threshold = 1
         controlled_vehicle_rewards = []
+        self.vehicles_speed = []
+        for i in range(len(self.controlled_vehicles)):
+            self.vehicles_speed.append(self.controlled_vehicles[i].speed)
+
         for v_action in action:
                 front_vehicle, _ = self.road.neighbour_vehicles(self.controlled_vehicles[vehicle_id])
                 time_headway_reward = 0
@@ -160,11 +166,6 @@ class MAHighwayEnv(AbstractEnv):
                     if (front_vehicle_distance <= 100) and (front_vehicle_distance > self.controlled_vehicles[vehicle_id].speed):
                         time_hr = front_vehicle_distance/(self.controlled_vehicles[vehicle_id].speed*time_headway_threshold)
                         time_headway_reward = utils.lmap(time_hr, [0,5.88], [0, 1])
-                if len(self.vehicles_speed) == 0:
-                    for i in range(len(self.controlled_vehicles)):
-                        self.vehicles_speed.append(i)
-                else:
-                    self.vehicles_speed[vehicle_id] = self.controlled_vehicles[vehicle_id].speed
                 collision_penalty = -1 if self.controlled_vehicles[vehicle_id].crashed else 0
                 lane_change_penalty = -1 if v_action in [0,2] else 0
                 v_class = type(self.controlled_vehicles[vehicle_id])
@@ -229,8 +230,13 @@ class MAHighwayEnv(AbstractEnv):
 
 
     def _info(self, obs: Observation, action: Action) -> dict:
+        
+        odd = [1,3,5,7,9,11,13,15] 
         info = {
             "vehicles_speed": self.vehicles_speed,
+            "avg_speed": sum(self.vehicles_speed)/len(self.vehicles_speed),
+            "avg_mlc_speed": sum([self.vehicles_speed[mlc] for mlc in range(len(self.vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.vehicles_speed)/2),
+            "avg_dlc_speed": sum([self.vehicles_speed[dlc] for dlc in odd])/(len(self.vehicles_speed)/2),
             "crashed": self.vehicle_crashed,
             "action": action,
         }
