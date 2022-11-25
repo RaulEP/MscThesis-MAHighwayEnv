@@ -16,8 +16,9 @@ os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 
 if __name__ == "__main__":
 
+    
     env = gym.make('ma-highway-v0')
-
+    """
     log_path = 'highway_a2c/'
     A2C_path = os.path.join('Training', 'Saved Models', 'A2C_model')
     best_model_path = os.path.join('Training', 'Saved Models', 'Best_Model')
@@ -35,14 +36,20 @@ if __name__ == "__main__":
 
     # set up logger
     new_logger = configure(tmp_path, ["stdout"])
+    """
 
     ###MODEL TESTING###
     model = A2C.load('Training/Saved Models/best_model', env=env)
-    #model = A2C.load('Training/Saved Models/A2C_model', env=env)
-    for episode in trange(2, desc="Test episodes"):
+    for episode in trange(1, desc="Test episodes"):
         obs, done = env.reset(), False
+        print("episode " + str(episode))
+        step = 1
         while not done:
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, done, info = env.step(action)
-            env.render('human')
+            speed_info = [step, info["avg_speed"],info["avg_mlc_speed"],info["avg_dlc_speed"]]
+            pprint(speed_info)
+
+            #env.render('human')
+            step += 1
     env.close()
