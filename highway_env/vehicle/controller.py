@@ -320,7 +320,7 @@ class MLCVehicle(ControlledVehicle):
                     position: Vector, heading: float = 0,
                     speed: float = 0, target_lane_index: LaneIndex = None, 
                     route: Route = None, speed_range: List = [17,25], 
-                    delta_speed = 2.5, objective_lane = 2, target_speed=22): 
+                    delta_speed = 0.5, objective_lane = 2, target_speed=22): 
                 super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
                 self.target_speed = target_speed
                 self.objective_lane = objective_lane
@@ -367,7 +367,7 @@ class DLCVehicle(ControlledVehicle):
                     heading: float = 0, speed: float = 0,
                     target_lane_index: LaneIndex = None, 
                     route: Route = None, speed_range: List = [17,33], 
-                    delta_speed = 2.5, target_speed= 28): 
+                    delta_speed = 0.5, target_speed= 30): 
                 super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
                 self.target_speed = target_speed
                 self.MIN_SPEED = speed_range[0]

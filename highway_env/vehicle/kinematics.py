@@ -73,7 +73,7 @@ class Vehicle(RoadObject):
         lane = road.network.get_lane((_from, _to, _id))
         if speed is None:
             if str(cls) == "<class 'highway_env.vehicle.controller.DLCVehicle'>":
-                speed = road.np_random.uniform(23, 25)
+                speed = road.np_random.uniform(22, 23)
             elif str(cls) == "<class 'highway_env.vehicle.controller.MLCVehicle'>":
                 speed = road.np_random.uniform(20, 22 )
             """
