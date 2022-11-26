@@ -193,6 +193,8 @@ class AbstractEnv(gym.Env):
 
         :return: the observation of the reset state
         """
+        self.speed_metrics = [] 
+        self.position_metrics = []
         self.update_metadata()
         self.define_spaces()  # First, to set the controlled vehicle class depending on action space
         self.time = self.steps = 0
@@ -240,20 +242,66 @@ class AbstractEnv(gym.Env):
         """Perform several steps of simulation with constant action."""
         frames = int(self.config["simulation_frequency"] // self.config["policy_frequency"])
         for frame in range(frames):
+
+            self.step_vehicles_speed = []
+            self.step_vehicles_position = []
+            if self.steps == 0:
+                for i in range(len(self.controlled_vehicles)):
+                    self.step_vehicles_speed.append(self.controlled_vehicles[i].speed)
+                    self.step_vehicles_position.append(self.controlled_vehicles[i].position[0])  
+
+                self.step_vehicles_position.insert(0, self.steps)
+                #position metrics
+                self.position_metrics.append(self.step_vehicles_position)
+            
+                #feel vehicle speed of steps
+                #self.vehicles_speed.append(self.step_vehicles_speed)
+
+                #calculate speed metrics
+                odd = [1,3,5,7,9,11,13,15]
+                self.avg_speed = sum(self.vehicles_speed[self.steps])/len(self.vehicles_speed[self.steps])
+                self.avg_mlc_speed = sum([self.vehicles_speed[self.steps][mlc] for mlc in range(len(self.vehicles_speed[self.steps])) if mlc % 2 == 0 or mlc == 0])/(len(self.vehicles_speed[self.steps])/2)
+                self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in odd])/(len(self.vehicles_speed[self.steps])/2)
+                self.step_speed_metrics = [self.steps, self.avg_speed, self.avg_mlc_speed, self.avg_dlc_speed]
+                self.speed_metrics.append(self.step_speed_metrics)
             # Forward action to the vehicle
             if action is not None \
                     and not self.config["manual_control"] \
                     and self.steps % int(self.config["simulation_frequency"] // self.config["policy_frequency"]) == 0:
                 self.action_type.act(action)
-
+     
             self.road.act()
             self.road.step(1 / self.config["simulation_frequency"])
             self.steps += 1
+
+            self.step_vehicles_speed = []
+            self.step_vehicles_position = []
+            for i in range(len(self.controlled_vehicles)):
+                self.step_vehicles_speed.append(self.controlled_vehicles[i].speed)
+                self.step_vehicles_position.append(self.controlled_vehicles[i].position[0])  
+
+            self.step_vehicles_position.insert(0, self.steps)
+            #position metrics
+            self.position_metrics.append(self.step_vehicles_position)
+            
+            #feel vehicle speed of steps
+            self.vehicles_speed.append(self.step_vehicles_speed)
+
+            #calculate speed metrics
+            odd = [1,3,5,7,9,11,13,15]
+            self.avg_speed = sum(self.vehicles_speed[self.steps])/len(self.vehicles_speed[self.steps])
+            self.avg_mlc_speed = sum([self.vehicles_speed[self.steps][mlc] for mlc in range(len(self.vehicles_speed[self.steps])) if mlc % 2 == 0 or mlc == 0])/(len(self.vehicles_speed[self.steps])/2)
+            self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in odd])/(len(self.vehicles_speed[self.steps])/2)
+            self.step_speed_metrics = [self.steps, self.avg_speed, self.avg_mlc_speed, self.avg_dlc_speed]
+            self.speed_metrics.append(self.step_speed_metrics)
+
+            
 
             # Automatically render intermediate simulation steps if a viewer has been launched
             # Ignored if the rendering is done offscreen
             if frame < frames - 1:  # Last frame will be rendered through env.render() as usual
                 self._automatic_rendering()
+
 
         self.enable_auto_render = False
 

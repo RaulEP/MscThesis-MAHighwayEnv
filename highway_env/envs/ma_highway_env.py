@@ -39,11 +39,13 @@ class MAHighwayEnv(AbstractEnv):
                     "action_config": {
                         "type": "DiscreteMetaAction",
             }},
+            "human_driver_type": "highway_env.vehicle.behavior.IDMVehicle",
+            "human_count": 0,
             "lanes_count": 3,
             "initial_lane_id": None,
             "speed_limit": 33,
             "duration": 40,  # [s]
-            "simulation_frequency": 60,  # [Hz]
+            "simulation_frequency": 15,  # [Hz]
             "policy_frequency": 5,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
@@ -76,8 +78,12 @@ class MAHighwayEnv(AbstractEnv):
         self.vehicles_speed = []
         self._create_road()
         self._create_vehicles()
+        
+        #register vehicles initial speeds
+        self.step_vehicles_speed = []
         for i in range(len(self.controlled_vehicles)):
-            self.vehicles_speed.append(self.controlled_vehicles[i].speed)
+            self.step_vehicles_speed.append(self.controlled_vehicles[i].speed)
+        self.vehicles_speed.append(self.step_vehicles_speed)
 
     def _create_road(self) -> None:
         """Create a road composed of straight adjacent lanes."""
@@ -86,6 +92,8 @@ class MAHighwayEnv(AbstractEnv):
 
     def _create_vehicles(self) -> None:
         """Create some new random vehicles of a given type, and add them on the road."""
+        if self.config["human_count"] > 0:
+                human_vehicle = utils.class_from_path(self.config["other_vehicles_type"])
         controlled_vehicle_types = self.config["controlled_vehicle_types"]
         vehicle_type_one = utils.class_from_path(controlled_vehicle_types[0])
         vehicle_type_two = utils.class_from_path(controlled_vehicle_types[1])
@@ -100,7 +108,12 @@ class MAHighwayEnv(AbstractEnv):
                 lane_id=self.config["initial_lane_id"],
                 spacing=self.config["ego_spacing"], 
             )
-            
+            """
+            adding human vehicle on the road
+            vehicle = human_vehicle.create_random(self.road, spacing=1 / self.config["vehicles_density"])
+            vehicle.randomize_behavior()
+            self.road.vehicles.append(vehicle)
+            """
             self.controlled_vehicles.append(vehicle)
             self.road.vehicles.append(vehicle)
 
@@ -154,9 +167,6 @@ class MAHighwayEnv(AbstractEnv):
         vehicle_id = 0
         time_headway_threshold = 1
         controlled_vehicle_rewards = []
-        self.vehicles_speed = []
-        for i in range(len(self.controlled_vehicles)):
-            self.vehicles_speed.append(self.controlled_vehicles[i].speed)
 
         for v_action in action:
                 front_vehicle, _ = self.road.neighbour_vehicles(self.controlled_vehicles[vehicle_id])
@@ -231,12 +241,10 @@ class MAHighwayEnv(AbstractEnv):
 
     def _info(self, obs: Observation, action: Action) -> dict:
         
-        odd = [1,3,5,7,9,11,13,15] 
         info = {
-            "vehicles_speed": self.vehicles_speed,
-            "avg_speed": sum(self.vehicles_speed)/len(self.vehicles_speed),
-            "avg_mlc_speed": sum([self.vehicles_speed[mlc] for mlc in range(len(self.vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.vehicles_speed)/2),
-            "avg_dlc_speed": sum([self.vehicles_speed[dlc] for dlc in odd])/(len(self.vehicles_speed)/2),
+            "vehicles_speed_history": self.vehicles_speed,
+            "speed_metrics": self.speed_metrics,
+            "position_metrics": self.position_metrics,
             "crashed": self.vehicle_crashed,
             "action": action,
         }
@@ -254,7 +262,7 @@ class MAHighwayEnv(AbstractEnv):
         The episode is over if any of the vehicle crashes or its outside of road
         """
         for i in range(len(self.controlled_vehicles)):
-            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[i].on_road:
+            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[0].on_road:
                 self.vehicle_crashed = True
                 return True
         return False
