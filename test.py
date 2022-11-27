@@ -25,12 +25,27 @@ if __name__ == "__main__":
         obs, done = env.reset(), False
         print("episode " + str(episode + 1))
         step = 1
-        #while not done:
-        for i in range(3):
+        while not done:
+        #for i in range(3):
             action, _ = model.predict(obs, deterministic=True)
+            #action = env.action_space.sample()
             obs, reward, done, info = env.step(action)
-            pprint(info["speed_metrics"])
-            pprint(info["position_metrics"])
+            
+            #check terminal conditions
+            pprint("Episode is terminated: " + str(done) + ", cars have crashed: " + str(info["crashed"]))
+
+            #environment elapsed time
+            pprint("Elapsed Time: " + str(info["elapsed_time"]))
+
+            #check position of 1st DLC and Last DLC
+            pprint("DLC 1 position is: {} and DLC 8 position is: {}".format(str(info["position_metrics"][-1][2]), str(info["position_metrics"][-1][-1])))
+            
+            #check if first DLC vehicle completed the road
+            pprint("DLC Vehicle complete road: " + str(info["road_complete"]))
+
+            #check speed metrics of last step
+            pprint(info["speed_metrics"][-1])
+            
             #env.render('human')
             step += 1
     env.close()
