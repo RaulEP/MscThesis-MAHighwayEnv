@@ -195,6 +195,7 @@ class AbstractEnv(gym.Env):
         """
         self.speed_metrics = [] 
         self.position_metrics = []
+        self.step_road_complete = False
         self.update_metadata()
         self.define_spaces()  # First, to set the controlled vehicle class depending on action space
         self.time = self.steps = 0
@@ -254,9 +255,6 @@ class AbstractEnv(gym.Env):
                 #position metrics
                 self.position_metrics.append(self.step_vehicles_position)
             
-                #feel vehicle speed of steps
-                #self.vehicles_speed.append(self.step_vehicles_speed)
-
                 #calculate speed metrics
                 odd = [1,3,5,7,9,11,13,15]
                 self.avg_speed = sum(self.vehicles_speed[self.steps])/len(self.vehicles_speed[self.steps])
@@ -283,6 +281,10 @@ class AbstractEnv(gym.Env):
             self.step_vehicles_position.insert(0, self.steps)
             #position metrics
             self.position_metrics.append(self.step_vehicles_position)
+
+            #calculates position of first DLC vehicle
+            if self.position_metrics[-1][2] > 1000:
+                self.step_road_complete = True
             
             #feel vehicle speed of steps
             self.vehicles_speed.append(self.step_vehicles_speed)
