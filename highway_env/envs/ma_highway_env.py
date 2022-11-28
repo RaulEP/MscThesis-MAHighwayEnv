@@ -45,11 +45,11 @@ class MAHighwayEnv(AbstractEnv):
             "initial_lane_id": None,
             "speed_limit": 33,
             "duration": 40,  # [s]
-            "simulation_frequency": 15,  # [Hz]
-            "policy_frequency": 1,  # [Hz]
+            "simulation_frequency": 60,  # [Hz]
+            "policy_frequency": 4,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
-            "screen_width": 1800, 
+            "screen_width": 1500, 
             "screen_height": 150, 
             "centering_position": [0.3, 0.5], 
             "scaling": 5.0,
@@ -272,7 +272,7 @@ class MAHighwayEnv(AbstractEnv):
         The episode is over if any of the vehicle crashes or its outside of road
         """
         for i in range(len(self.controlled_vehicles)):
-            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[0].on_road:
+            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[1].on_road:
                 self.vehicle_crashed = True
                 return True
         return False
