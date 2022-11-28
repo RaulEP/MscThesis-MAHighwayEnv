@@ -39,12 +39,14 @@ class MAHighwayEnv(AbstractEnv):
                     "action_config": {
                         "type": "DiscreteMetaAction",
             }},
+            "human_driver_type": "highway_env.vehicle.behavior.IDMVehicle",
+            "human_count": 0,
             "lanes_count": 3,
             "initial_lane_id": None,
             "speed_limit": 33,
             "duration": 40,  # [s]
-            "simulation_frequency": 60,  # [Hz]
-            "policy_frequency": 5,  # [Hz]
+            "simulation_frequency": 15,  # [Hz]
+            "policy_frequency": 1,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
             "screen_width": 1800, 
@@ -76,8 +78,12 @@ class MAHighwayEnv(AbstractEnv):
         self.vehicles_speed = []
         self._create_road()
         self._create_vehicles()
+        
+        #register vehicles initial speeds
+        self.step_vehicles_speed = []
         for i in range(len(self.controlled_vehicles)):
-            self.vehicles_speed.append(self.controlled_vehicles[i].speed)
+            self.step_vehicles_speed.append(self.controlled_vehicles[i].speed)
+        self.vehicles_speed.append(self.step_vehicles_speed)
 
     def _create_road(self) -> None:
         """Create a road composed of straight adjacent lanes."""
@@ -86,10 +92,20 @@ class MAHighwayEnv(AbstractEnv):
 
     def _create_vehicles(self) -> None:
         """Create some new random vehicles of a given type, and add them on the road."""
+        human_count = self.config["human_count"]
+        dlc_count = self.config["DLC_config"]["count"]
+        mlc_count = self.config["MLC_config"]["count"]
         controlled_vehicle_types = self.config["controlled_vehicle_types"]
         vehicle_type_one = utils.class_from_path(controlled_vehicle_types[0])
         vehicle_type_two = utils.class_from_path(controlled_vehicle_types[1])
-        type_one_per_type_two = near_split(self.config["DLC_config"]["count"], num_bins=self.config["MLC_config"]["count"])
+
+        #HUMAN DRIVERS ARE NOT FULLY IMPLEMENTED YET
+        if human_count > 0:
+                type_one_per_type_two = near_split(dlc_count, num_bins=human_count)
+                vehicle_type_one = utils.class_from_path(controlled_vehicle_types[1])
+                human_vehicle = utils.class_from_path(self.config["human_driver_type"])
+        else:
+            type_one_per_type_two = near_split(dlc_count, num_bins=mlc_count)
 
         self.controlled_vehicles = []
 
@@ -100,19 +116,24 @@ class MAHighwayEnv(AbstractEnv):
                 lane_id=self.config["initial_lane_id"],
                 spacing=self.config["ego_spacing"], 
             )
-            
+ 
             self.controlled_vehicles.append(vehicle)
             self.road.vehicles.append(vehicle)
 
-            for _ in range(others):
-                vehicle = vehicle_type_two.create_random(
-                    self.road,
-                    lane_id=self.config["initial_lane_id"],
-                    spacing=self.config["ego_spacing"],
-                )
-
-                self.controlled_vehicles.append(vehicle)
+            if human_count >= 1:
+                vehicle = human_vehicle.create_random(self.road, spacing=1 / self.config["vehicles_density"])
+                vehicle.randomize_behavior()
                 self.road.vehicles.append(vehicle)
+            else:
+                for _ in range(others):
+                    vehicle = vehicle_type_two.create_random(
+                        self.road,
+                        lane_id=self.config["initial_lane_id"],
+                        spacing=self.config["ego_spacing"],
+                    )
+
+                    self.controlled_vehicles.append(vehicle)
+                    self.road.vehicles.append(vehicle)
 
     def step(self, action: Action) -> Tuple[Observation, float, bool, bool, dict]:
         """
@@ -154,9 +175,6 @@ class MAHighwayEnv(AbstractEnv):
         vehicle_id = 0
         time_headway_threshold = 1
         controlled_vehicle_rewards = []
-        self.vehicles_speed = []
-        for i in range(len(self.controlled_vehicles)):
-            self.vehicles_speed.append(self.controlled_vehicles[i].speed)
 
         for v_action in action:
                 front_vehicle, _ = self.road.neighbour_vehicles(self.controlled_vehicles[vehicle_id])
@@ -231,12 +249,12 @@ class MAHighwayEnv(AbstractEnv):
 
     def _info(self, obs: Observation, action: Action) -> dict:
         
-        odd = [1,3,5,7,9,11,13,15] 
         info = {
-            "vehicles_speed": self.vehicles_speed,
-            "avg_speed": sum(self.vehicles_speed)/len(self.vehicles_speed),
-            "avg_mlc_speed": sum([self.vehicles_speed[mlc] for mlc in range(len(self.vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.vehicles_speed)/2),
-            "avg_dlc_speed": sum([self.vehicles_speed[dlc] for dlc in odd])/(len(self.vehicles_speed)/2),
+            "elapsed_time": self.time,
+            "road_complete": self.step_road_complete,
+            "vehicles_speed_history": self.vehicles_speed,
+            "speed_metrics": self.speed_metrics,
+            "position_metrics": self.position_metrics,
             "crashed": self.vehicle_crashed,
             "action": action,
         }
@@ -254,7 +272,7 @@ class MAHighwayEnv(AbstractEnv):
         The episode is over if any of the vehicle crashes or its outside of road
         """
         for i in range(len(self.controlled_vehicles)):
-            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[i].on_road:
+            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[0].on_road:
                 self.vehicle_crashed = True
                 return True
         return False
