@@ -256,10 +256,11 @@ class AbstractEnv(gym.Env):
                 self.position_metrics.append(self.step_vehicles_position)
             
                 #calculate speed metrics
-                odd = [1,3,5,7,9,11,13,15]
+                #odd = [1,3,5,7,9,11,13,15,17,19,21,23]
                 self.avg_speed = sum(self.vehicles_speed[self.steps])/len(self.vehicles_speed[self.steps])
                 self.avg_mlc_speed = sum([self.vehicles_speed[self.steps][mlc] for mlc in range(len(self.vehicles_speed[self.steps])) if mlc % 2 == 0 or mlc == 0])/(len(self.vehicles_speed[self.steps])/2)
-                self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in odd])/(len(self.vehicles_speed[self.steps])/2)
+                self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in range(1,len(self.vehicles_speed[0]),2)])/(len(self.vehicles_speed[self.steps])/2)
+                #self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in odd])/(len(self.vehicles_speed[self.steps])/2)
                 self.step_speed_metrics = [self.steps, self.avg_speed, self.avg_mlc_speed, self.avg_dlc_speed]
                 self.speed_metrics.append(self.step_speed_metrics)
             # Forward action to the vehicle
@@ -290,10 +291,11 @@ class AbstractEnv(gym.Env):
             self.vehicles_speed.append(self.step_vehicles_speed)
 
             #calculate speed metrics
-            odd = [1,3,5,7,9,11,13,15]
+            #odd = [1,3,5,7,9,11,13,15]
             self.avg_speed = sum(self.vehicles_speed[self.steps])/len(self.vehicles_speed[self.steps])
             self.avg_mlc_speed = sum([self.vehicles_speed[self.steps][mlc] for mlc in range(len(self.vehicles_speed[self.steps])) if mlc % 2 == 0 or mlc == 0])/(len(self.vehicles_speed[self.steps])/2)
-            self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in odd])/(len(self.vehicles_speed[self.steps])/2)
+            self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in range(1,len(self.vehicles_speed[0]),2)])/(len(self.vehicles_speed[self.steps])/2)
+            #self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in odd])/(len(self.vehicles_speed[self.steps])/2)
             self.step_speed_metrics = [self.steps, self.avg_speed, self.avg_mlc_speed, self.avg_dlc_speed]
             self.speed_metrics.append(self.step_speed_metrics)
 
