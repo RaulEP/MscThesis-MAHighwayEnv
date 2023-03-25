@@ -152,8 +152,26 @@ class ControlledVehicle(Vehicle):
         :param target_speed: the desired speed
         :return: an acceleration command [m/s2]
         """
-        return self.KP_A * (target_speed - self.speed)
+        #source = Acceleration-Deceleration Behaviour of Various Vehicle Types P.S.Bokare a, A.K.Maurya b at 2017       
+        
+        #maximum acceleration rate of petrol vehicle
+        max_threshold = 2.87
+        #max mean acceleration rate of petrol vehicle
+        mean_threshold =  0.82
+        safe_threshold = 0
 
+        acceleration = self.KP_A * (target_speed - self.speed)
+        
+        if self.vehicle_type == "MLC":
+            safe_threshold = mean_threshold 
+        else:
+            safe_threshold = max_threshold
+        
+        if acceleration > safe_threshold:
+            return safe_threshold
+        else:
+            return acceleration
+        
     def get_routes_at_intersection(self) -> List[Route]:
         """Get the list of routes that can be followed at the next intersection."""
         if not self.route:
@@ -328,6 +346,7 @@ class MLCVehicle(ControlledVehicle):
                 self.MAX_SPEED = speed_range[1]
                 self.DELTA_SPEED = delta_speed
                 self.DEFAULT_INITIAL_SPEEDS = [20, 22]
+                self.vehicle_type = "MLC"
 
     @classmethod
     def create_from(cls, vehicle: "MLCVehicle") -> "MLCVehicle":
@@ -373,6 +392,7 @@ class DLCVehicle(ControlledVehicle):
                 self.MIN_SPEED = speed_range[0]
                 self.MAX_SPEED = speed_range[1]
                 self.DELTA_SPEED = delta_speed
+                self.vehicle_type = "DLC"
 
     @classmethod    
     def create_from(cls, vehicle: "DLCVehicle") -> "DLCVehicle":
