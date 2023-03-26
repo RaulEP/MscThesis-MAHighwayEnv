@@ -346,7 +346,7 @@ class MLCVehicle(ControlledVehicle):
                 self.MAX_SPEED = speed_range[1]
                 self.DELTA_SPEED = delta_speed
                 self.DEFAULT_INITIAL_SPEEDS = [20, 22]
-                self.vehicle_type = "MLC"
+                self.vehicle_type = 0
 
     @classmethod
     def create_from(cls, vehicle: "MLCVehicle") -> "MLCVehicle":
@@ -392,7 +392,7 @@ class DLCVehicle(ControlledVehicle):
                 self.MIN_SPEED = speed_range[0]
                 self.MAX_SPEED = speed_range[1]
                 self.DELTA_SPEED = delta_speed
-                self.vehicle_type = "DLC"
+                self.vehicle_type = 1
 
     @classmethod    
     def create_from(cls, vehicle: "DLCVehicle") -> "DLCVehicle":

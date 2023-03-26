@@ -33,7 +33,7 @@ class MAHighwayEnv(AbstractEnv):
                 "observation_config": {
                     "type": "Kinematics",
                     "normalize": True,
-                    "features": ["x", "y", "vx", "vy"]}},
+                    "features": ["x", "y", "vx", "vy", "vtype"]}},
             "action": {
                     "type": "MultiAgentAction",
                     "action_config": {
