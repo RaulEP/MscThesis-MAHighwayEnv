@@ -193,9 +193,6 @@ class AbstractEnv(gym.Env):
 
         :return: the observation of the reset state
         """
-        self.speed_metrics = [] 
-        self.position_metrics = []
-        self.step_road_complete = False
         self.update_metadata()
         self.define_spaces()  # First, to set the controlled vehicle class depending on action space
         self.time = self.steps = 0
@@ -242,64 +239,53 @@ class AbstractEnv(gym.Env):
     def _simulate(self, action: Optional[Action] = None) -> None:
         """Perform several steps of simulation with constant action."""
         frames = int(self.config["simulation_frequency"] // self.config["policy_frequency"])
-        for frame in range(frames):
 
-            self.step_vehicles_speed = []
-            self.step_vehicles_position = []
-            if self.steps == 0:
-                for i in range(len(self.controlled_vehicles)):
-                    self.step_vehicles_speed.append(self.controlled_vehicles[i].speed)
-                    self.step_vehicles_position.append(self.controlled_vehicles[i].position[0])  
-
-                self.step_vehicles_position.insert(0, self.steps)
-                #position metrics
-                self.position_metrics.append(self.step_vehicles_position)
-            
-                #calculate speed metrics
-                #odd = [1,3,5,7,9,11,13,15,17,19,21,23]
-                self.avg_speed = sum(self.vehicles_speed[self.steps])/len(self.vehicles_speed[self.steps])
-                self.avg_mlc_speed = sum([self.vehicles_speed[self.steps][mlc] for mlc in range(len(self.vehicles_speed[self.steps])) if mlc % 2 == 0 or mlc == 0])/(len(self.vehicles_speed[self.steps])/2)
-                self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in range(1,len(self.vehicles_speed[0]),2)])/(len(self.vehicles_speed[self.steps])/2)
-                #self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in odd])/(len(self.vehicles_speed[self.steps])/2)
-                self.step_speed_metrics = [self.steps, self.avg_speed, self.avg_mlc_speed, self.avg_dlc_speed]
-                self.speed_metrics.append(self.step_speed_metrics)
-            # Forward action to the vehicle
-            if action is not None \
-                    and not self.config["manual_control"] \
-                    and self.steps % int(self.config["simulation_frequency"] // self.config["policy_frequency"]) == 0:
-                self.action_type.act(action)
+        for frame in range(frames): #ONE LOOP IS MISSING
      
             self.road.act()
             self.road.step(1 / self.config["simulation_frequency"])
             self.steps += 1
 
-            self.step_vehicles_speed = []
-            self.step_vehicles_position = []
+            self.step_vehicles_speed = [self.steps]
+            self.step_vehicles_position = [self.steps]
+            self.step_arrival_time = []
+            self.step_in_target_lane = []
+            self.all_dlc_destination_complete = False
+
             for i in range(len(self.controlled_vehicles)):
                 self.step_vehicles_speed.append(self.controlled_vehicles[i].speed)
                 self.step_vehicles_position.append(self.controlled_vehicles[i].position[0])  
 
-            self.step_vehicles_position.insert(0, self.steps)
-            #position metrics
-            self.position_metrics.append(self.step_vehicles_position)
-
-            #calculates position of first DLC vehicle
-            if self.position_metrics[-1][2] > 1000:
-                self.step_road_complete = True
-            
-            #feel vehicle speed of steps
+            self.vehicles_position.append(self.step_vehicles_position)
             self.vehicles_speed.append(self.step_vehicles_speed)
 
-            #calculate speed metrics
-            #odd = [1,3,5,7,9,11,13,15]
-            self.avg_speed = sum(self.vehicles_speed[self.steps])/len(self.vehicles_speed[self.steps])
-            self.avg_mlc_speed = sum([self.vehicles_speed[self.steps][mlc] for mlc in range(len(self.vehicles_speed[self.steps])) if mlc % 2 == 0 or mlc == 0])/(len(self.vehicles_speed[self.steps])/2)
-            self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in range(1,len(self.vehicles_speed[0]),2)])/(len(self.vehicles_speed[self.steps])/2)
-            #self.avg_dlc_speed = sum([self.vehicles_speed[self.steps][dlc] for dlc in odd])/(len(self.vehicles_speed[self.steps])/2)
-            self.step_speed_metrics = [self.steps, self.avg_speed, self.avg_mlc_speed, self.avg_dlc_speed]
-            self.speed_metrics.append(self.step_speed_metrics)
+            #speed metrics
+            avg_speed = sum(self.step_vehicles_speed)/len(self.step_vehicles_speed)
+            avg_mlc_speed = sum([self.step_vehicles_speed[mlc] for mlc in range(len(self.step_vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.step_vehicles_speed)/2)
+            avg_dlc_speed = sum([self.step_vehicles_speed[dlc] for dlc in range(1,len(self.step_vehicles_speed),2)])/(len(self.step_vehicles_speed)/2)
+            self.speed_metrics.append([self.steps, avg_speed, avg_mlc_speed, avg_dlc_speed])
 
-            
+            #position metrics ##MUST ANALYZE
+            for i in range(len(self.controlled_vehicles)):
+                if self.controlled_vehicles[i].position[0] > 1000:
+                    self.step_arrival_time.append(True)
+                else:
+                    self.step_arrival_time.append(False)
+                if self.controlled_vehicles[i].position[1] > 7:
+                    self.step_in_target_lane.append(True)
+                else:
+                    self.step_in_target_lane.append(False)
+
+            #check if the first DLC vehicle arrived to destination
+            if self.step_vehicles_position[2] > 1000:
+                self.all_dlc_destination_complete = True
+            self.position_metrics.append([self.steps ,self.step_arrival_time, self.step_in_target_lane, self.all_dlc_destination_complete])
+
+            # Forward action to the vehicle
+            if action is not None \
+                    and not self.config["manual_control"] \
+                    and self.steps % int(self.config["simulation_frequency"] // self.config["policy_frequency"]) == 0:
+                self.action_type.act(action)
 
             # Automatically render intermediate simulation steps if a viewer has been launched
             # Ignored if the rendering is done offscreen
