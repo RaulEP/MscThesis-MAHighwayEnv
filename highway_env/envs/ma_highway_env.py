@@ -45,8 +45,8 @@ class MAHighwayEnv(AbstractEnv):
             "initial_lane_id": None,
             "speed_limit": 33,
             "duration": 40,  # [s]
-            "simulation_frequency": 60,  # [Hz]
-            "policy_frequency": 4,  # [Hz]
+            "simulation_frequency": 120,  # [Hz] This defines how many frames per step get simulated so it can be seen on the graphical representation
+            "policy_frequency": 1,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
             "screen_width": 1500, 
@@ -74,16 +74,43 @@ class MAHighwayEnv(AbstractEnv):
         return config
 
     def _reset(self) -> None:
-        self.vehicle_crashed = False
         self.vehicles_speed = []
+        self.vehicles_position = []
+        self.vehicle_crashed = False
+        self.speed_metrics = []
+        self.position_metrics = []
+        self.all_dlc_destination_complete = False
         self._create_road()
         self._create_vehicles()
         
-        #register vehicles initial speeds
-        self.step_vehicles_speed = []
+        self.step_vehicles_speed = [self.steps]
+        self.step_vehicles_position = [self.steps]
+        self.step_arrival_time = []
+        self.step_in_target_lane = []
+        self.all_dlc_destination_complete = False
+
         for i in range(len(self.controlled_vehicles)):
             self.step_vehicles_speed.append(self.controlled_vehicles[i].speed)
+            self.step_vehicles_position.append(self.controlled_vehicles[i].position[0])  
+
+        self.vehicles_position.append(self.step_vehicles_position)
         self.vehicles_speed.append(self.step_vehicles_speed)
+
+        #speed metrics
+        avg_speed = sum(self.step_vehicles_speed)/len(self.step_vehicles_speed)
+        avg_mlc_speed = sum([self.step_vehicles_speed[mlc] for mlc in range(len(self.step_vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.step_vehicles_speed)/2)
+        avg_dlc_speed = sum([self.step_vehicles_speed[dlc] for dlc in range(1,len(self.step_vehicles_speed),2)])/(len(self.step_vehicles_speed)/2)
+        self.speed_metrics.append([self.steps, avg_speed, avg_mlc_speed, avg_dlc_speed])
+
+        #position metrics ##MUST ANALYZE
+        for i in range(len(self.controlled_vehicles)):
+            self.step_arrival_time.append(False)
+            self.step_in_target_lane.append(False)
+
+        #check if the first DLC vehicle arrived to destination
+        if self.step_vehicles_position[2] > 1000:
+            self.all_dlc_destination_complete = True
+        self.position_metrics.append([self.steps ,self.step_arrival_time, self.step_in_target_lane, self.all_dlc_destination_complete])
 
     def _create_road(self) -> None:
         """Create a road composed of straight adjacent lanes."""
@@ -250,10 +277,10 @@ class MAHighwayEnv(AbstractEnv):
     def _info(self, obs: Observation, action: Action) -> dict:
         
         info = {
-            "elapsed_time": self.time,
-            "road_complete": self.step_road_complete,
-            "vehicles_speed_history": self.vehicles_speed,
+            "elapsed_time": self.steps,
             "speed_metrics": self.speed_metrics,
+            "vehicles_speed": self.vehicles_speed,
+            "vehicles_position": self.vehicles_position,
             "position_metrics": self.position_metrics,
             "crashed": self.vehicle_crashed,
             "action": action,
@@ -272,9 +299,13 @@ class MAHighwayEnv(AbstractEnv):
         The episode is over if any of the vehicle crashes or its outside of road
         """
         for i in range(len(self.controlled_vehicles)):
-            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[1].on_road:
+            
+            if self.controlled_vehicles[i].crashed:
                 self.vehicle_crashed = True
                 return True
+            if not self.controlled_vehicles[1].on_road:
+                return True
+
         return False
 
     def _is_truncated(self) -> bool:
