@@ -240,46 +240,37 @@ class AbstractEnv(gym.Env):
         """Perform several steps of simulation with constant action."""
         frames = int(self.config["simulation_frequency"] // self.config["policy_frequency"])
 
-        for frame in range(frames): #ONE LOOP IS MISSING
+        for frame in range(frames):
      
             self.road.act()
             self.road.step(1 / self.config["simulation_frequency"])
-            self.steps += 1
 
-            self.step_vehicles_speed = [self.steps]
-            self.step_vehicles_position = [self.steps]
-            self.step_arrival_time = []
-            self.step_in_target_lane = []
-            self.all_dlc_destination_complete = False
+            self.step_vehicles_speed = []
+            self.step_vehicles_position = []
 
             for i in range(len(self.controlled_vehicles)):
-                self.step_vehicles_speed.append(self.controlled_vehicles[i].speed)
-                self.step_vehicles_position.append(self.controlled_vehicles[i].position[0])  
+                self.step_vehicles_speed.append(round(self.controlled_vehicles[i].speed, 2))
+                self.step_vehicles_position.append(round(self.controlled_vehicles[i].position[0],2))  
 
-            self.vehicles_position.append(self.step_vehicles_position)
-            self.vehicles_speed.append(self.step_vehicles_speed)
-
-            #speed metrics
-            avg_speed = sum(self.step_vehicles_speed)/len(self.step_vehicles_speed)
-            avg_mlc_speed = sum([self.step_vehicles_speed[mlc] for mlc in range(len(self.step_vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.step_vehicles_speed)/2)
-            avg_dlc_speed = sum([self.step_vehicles_speed[dlc] for dlc in range(1,len(self.step_vehicles_speed),2)])/(len(self.step_vehicles_speed)/2)
-            self.speed_metrics.append([self.steps, avg_speed, avg_mlc_speed, avg_dlc_speed])
+            self.avg_speed = sum(self.step_vehicles_speed)/len(self.step_vehicles_speed)
+            self.avg_mlc_speed = sum([self.step_vehicles_speed[mlc] for mlc in range(len(self.step_vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.step_vehicles_speed)/2)
+            self.avg_dlc_speed = sum([self.step_vehicles_speed[dlc] for dlc in range(1,len(self.step_vehicles_speed),2)])/(len(self.step_vehicles_speed)/2)
 
             #position metrics ##MUST ANALYZE
             for i in range(len(self.controlled_vehicles)):
-                if self.controlled_vehicles[i].position[0] > 1000:
-                    self.step_arrival_time.append(True)
-                else:
-                    self.step_arrival_time.append(False)
+                #check if vehicle arrive to destination
+                if self.controlled_vehicles[i].position[0] > 1000 and self.step_arrival_time[i] == 0:
+                    self.step_arrival_time[i] = self.time
+                #check if vehicle is in bottom-most lane
                 if self.controlled_vehicles[i].position[1] > 7:
-                    self.step_in_target_lane.append(True)
-                else:
-                    self.step_in_target_lane.append(False)
+                    self.step_in_target_lane[i] = 1
+            
+            #I have to fix this one
+            self.percentage_in_target = (len([1 for i in self.step_arrival_time if i !=  0]))/(len(self.controlled_vehicles)/2)
 
             #check if the first DLC vehicle arrived to destination
-            if self.step_vehicles_position[2] > 1000:
-                self.all_dlc_destination_complete = True
-            self.position_metrics.append([self.steps ,self.step_arrival_time, self.step_in_target_lane, self.all_dlc_destination_complete])
+            if self.step_vehicles_position[1] > 1000:
+                self.all_dlc_destination_complete = 1
 
             # Forward action to the vehicle
             if action is not None \
@@ -292,7 +283,9 @@ class AbstractEnv(gym.Env):
             if frame < frames - 1:  # Last frame will be rendered through env.render() as usual
                 self._automatic_rendering()
 
-
+        self.steps += 1
+        self.vehicles_position.append(self.step_vehicles_position)
+        self.vehicles_speed.append(self.step_vehicles_speed)
         self.enable_auto_render = False
 
     def render(self, mode: str = 'human') -> Optional[np.ndarray]:

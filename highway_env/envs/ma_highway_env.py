@@ -76,41 +76,38 @@ class MAHighwayEnv(AbstractEnv):
     def _reset(self) -> None:
         self.vehicles_speed = []
         self.vehicles_position = []
-        self.vehicle_crashed = False
-        self.speed_metrics = []
-        self.position_metrics = []
-        self.all_dlc_destination_complete = False
+        self.vehicle_crashed = 0
         self._create_road()
         self._create_vehicles()
         
-        self.step_vehicles_speed = [self.steps]
-        self.step_vehicles_position = [self.steps]
+        self.percentage_in_target = 0
+        self.step_vehicles_speed = []
+        self.step_vehicles_position = []
         self.step_arrival_time = []
         self.step_in_target_lane = []
-        self.all_dlc_destination_complete = False
+        self.all_dlc_destination_complete = 0
+        self.avg_speed = 0
+        self.avg_mlc_speed = 0
+        self.avg_dlc_speed = 0
 
         for i in range(len(self.controlled_vehicles)):
-            self.step_vehicles_speed.append(self.controlled_vehicles[i].speed)
-            self.step_vehicles_position.append(self.controlled_vehicles[i].position[0])  
+            self.step_vehicles_speed.append(round(self.controlled_vehicles[i].speed,2))
+            self.step_vehicles_position.append(round(self.controlled_vehicles[i].position[0],2))
+            if len(self.step_arrival_time) != 0:
+                self.step_arrival_time.append(0)
+            if len(self.step_in_target_lane) != 0:
+                self.step_in_target_lane.append(0)  
 
         self.vehicles_position.append(self.step_vehicles_position)
         self.vehicles_speed.append(self.step_vehicles_speed)
 
-        #speed metrics
-        avg_speed = sum(self.step_vehicles_speed)/len(self.step_vehicles_speed)
-        avg_mlc_speed = sum([self.step_vehicles_speed[mlc] for mlc in range(len(self.step_vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.step_vehicles_speed)/2)
-        avg_dlc_speed = sum([self.step_vehicles_speed[dlc] for dlc in range(1,len(self.step_vehicles_speed),2)])/(len(self.step_vehicles_speed)/2)
-        self.speed_metrics.append([self.steps, avg_speed, avg_mlc_speed, avg_dlc_speed])
-
-        #position metrics ##MUST ANALYZE
+        self.avg_speed = sum(self.step_vehicles_speed)/len(self.step_vehicles_speed)
+        self.avg_mlc_speed = sum([self.step_vehicles_speed[mlc] for mlc in range(len(self.step_vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.step_vehicles_speed)/2)
+        self.avg_dlc_speed = sum([self.step_vehicles_speed[dlc] for dlc in range(1,len(self.step_vehicles_speed),2)])/(len(self.step_vehicles_speed)/2)
+    
         for i in range(len(self.controlled_vehicles)):
-            self.step_arrival_time.append(False)
-            self.step_in_target_lane.append(False)
-
-        #check if the first DLC vehicle arrived to destination
-        if self.step_vehicles_position[2] > 1000:
-            self.all_dlc_destination_complete = True
-        self.position_metrics.append([self.steps ,self.step_arrival_time, self.step_in_target_lane, self.all_dlc_destination_complete])
+            self.step_arrival_time.append(0)
+            self.step_in_target_lane.append(0)
 
     def _create_road(self) -> None:
         """Create a road composed of straight adjacent lanes."""
@@ -249,10 +246,10 @@ class MAHighwayEnv(AbstractEnv):
                         target_speed_reward = (self.controlled_vehicles[vehicle_id].speed - self.config["DLC_config"]["reward_speed_range"][0]) \
                                 /(self.config["DLC_config"]["reward_speed_range"][1] - self.config["DLC_config"]["reward_speed_range"][0])
 
-                    if self.controlled_vehicles[vehicle_id].destination[0] >= 10000:
+                    if self.controlled_vehicles[vehicle_id].destination[0] >= 1000:
                         finish_road_reward = 1
                     else:
-                        finish_road_reward = self.controlled_vehicles[vehicle_id].destination[0]/10000
+                        finish_road_reward = self.controlled_vehicles[vehicle_id].destination[0]/1000
 
                     #ANALYZE THIS    
                     forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
@@ -277,20 +274,24 @@ class MAHighwayEnv(AbstractEnv):
     def _info(self, obs: Observation, action: Action) -> dict:
         
         info = {
-            "elapsed_time": self.steps,
-            "speed_metrics": self.speed_metrics,
-            "vehicles_speed": self.vehicles_speed,
-            "vehicles_position": self.vehicles_position,
-            "position_metrics": self.position_metrics,
+            "elapsed_time|timestep": self.steps,
+            "avg_speed": "{:.2f}".format(self.avg_speed),
+            "avg_dlc_speed": "{:.2f}".format(self.avg_dlc_speed),
+            "avg_mlc_speed": "{:.2f}".format(self.avg_mlc_speed),
+            "vehicles_speed": self.step_vehicles_speed,
+            "vehicles_position": self.step_vehicles_position,
             "crashed": self.vehicle_crashed,
-            "action": action,
+            "arrival_time": self.step_arrival_time, 
+            "mlc_in_target_lane": self.step_in_target_lane,
+            "dlc_destination_complete=": self.all_dlc_destination_complete,
+            "percentage_in_target_lane": "{:.2f}".format(self.percentage_in_target),
         }
-
+        
         try:
             info["rewards"] = self._rewards(action)
 
         except NotImplementedError:
-            pass
+            pass 
         return info
 
                 
@@ -301,10 +302,10 @@ class MAHighwayEnv(AbstractEnv):
         for i in range(len(self.controlled_vehicles)):
             
             if self.controlled_vehicles[i].crashed:
-                self.vehicle_crashed = True
-                return True
+                self.vehicle_crashed = 1
+                return 1
             if not self.controlled_vehicles[1].on_road:
-                return True
+                return 1
 
         return False
 
