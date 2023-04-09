@@ -23,3 +23,70 @@ _build
 # Outputs
 **/out/*
 main.ipynb
+Training/Saved Models/A2C_model.zip
+Training/Saved Models/BESTTrained_modelA2C16.zip
+Training/Saved Models/Trained_modelA2C8.zip
+Training/Saved Models/Trained_modelA2C24.zip
+Training/Saved Models/Trained_modelPPO8.zip
+Training/Saved Models/Trained_modelPPO16.zip
+Training/Saved Models/Trained_modelPPO24.zip
+Training/Saved Models/Trained_modelTRPO8.zip
+Training/Saved Models/Trained_modelTRPO16.zip
+Training/Saved Models/Trained_modelTRPO24.zip
+Training/Saved Models/Best_Model/best_model.zip
+stats/position_metrics/position_metricsA2C8.txt
+stats/position_metrics/position_metricsA2C16.txt
+stats/position_metrics/position_metricsA2C24.txt
+stats/position_metrics/position_metricsPPO8.txt
+stats/position_metrics/position_metricsPPO16.txt
+stats/position_metrics/position_metricsPPO24.txt
+stats/position_metrics/position_metricsTRPO8.txt
+stats/position_metrics/position_metricsTRPO16.txt
+stats/position_metrics/position_metricsTRPO24.txt
+stats/speed_metrics/speed_metricsA2C8.txt
+stats/speed_metrics/speed_metricsA2C16.txt
+stats/speed_metrics/speed_metricsA2C24.txt
+stats/speed_metrics/speed_metricsPPO8.txt
+stats/speed_metrics/speed_metricsPPO16.txt
+stats/speed_metrics/speed_metricsPPO24.txt
+stats/speed_metrics/speed_metricsTRPO8.txt
+stats/speed_metrics/speed_metricsTRPO16.txt
+stats/speed_metrics/speed_metricsTRPO24.txt
+Trained_model_logs/Datasets/A2C_8Agents.csv
+Trained_model_logs/Datasets/A2C_8Agents.json
+Trained_model_logs/Datasets/A2C_16Agents.json
+Trained_model_logs/Datasets/A2C_24Agents.json
+Trained_model_logs/Datasets/PPO_8Agents.csv
+Trained_model_logs/Datasets/PPO_8Agents.json
+Trained_model_logs/Datasets/PPO_16Agents.json
+Trained_model_logs/Datasets/PPO_324Agents.json
+Trained_model_logs/Datasets/TRPO_8Agents.csv
+Trained_model_logs/Datasets/TRPO_8Agents.json
+Trained_model_logs/Datasets/TRPO_16Agents.csv
+Trained_model_logs/Datasets/TRPO_16Agents.json
+Trained_model_logs/Datasets/TRPO_24Agents.csv
+Trained_model_logs/Datasets/TRPO_24Agents.json
+Trained_model_logs/TRPO_16Agents/events.out.tfevents.1672466286.iotlab-MS-7C82.847.0
+Trained_model_logs/TRPO_24Agents/events.out.tfevents.1672470326.iotlab-MS-7C82.2962.0
+Trained_model_logs/TRPO_8Agents/events.out.tfevents.1672476784.iotlab-MS-7C82.6136.0
+Trained_model_logs_old/A2C_16Agents/events.out.tfevents.1669395582.iotlab-MS-7C82.18017.0
+Trained_model_logs_old/A2C_24Agents/events.out.tfevents.1669470225.iotlab-MS-7C82.16540.0
+Trained_model_logs_old/A2C_8Agents/events.out.tfevents.1669618937.iotlab-MS-7C82.10855.0
+Trained_model_logs_old/Datasets/A2C_16Agents.csv
+Trained_model_logs_old/Datasets/A2C_24Agents.csv
+Trained_model_logs_old/Datasets/position_dlc.txt
+Trained_model_logs_old/Datasets/position_human.txt
+Trained_model_logs_old/Datasets/PPO_16Agents.csv
+Trained_model_logs_old/Datasets/PPO_324Agents.csv
+Trained_model_logs_old/PPO_16Agents/events.out.tfevents.1669399297.iotlab-MS-7C82.19512.0
+Trained_model_logs_old/PPO_324Agents/events.out.tfevents.1669479264.iotlab-MS-7C82.19996.0
+Trained_model_logs_old/PPO_8Agents/events.out.tfevents.1669647274.iotlab-MS-7C82.20852.0
+mean_pos.txt
+Mean_POSA2C16.txt
+Mean_POSPPO16.txt
+Mean_POSTRPO16.txt
+test.ipynb
+test2 copy.ipynb
+test2.ipynb
+Training.ipynb
+test.ipynb
