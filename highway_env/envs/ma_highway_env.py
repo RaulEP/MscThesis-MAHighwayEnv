@@ -33,7 +33,7 @@ class MAHighwayEnv(AbstractEnv):
                 "observation_config": {
                     "type": "Kinematics",
                     "normalize": True,
-                    "features": ["x", "y", "vx", "vy", "vtype"]}},
+                    "features": ["x", "y", "vx", "vy"]}},
             "action": {
                     "type": "MultiAgentAction",
                     "action_config": {
@@ -44,8 +44,8 @@ class MAHighwayEnv(AbstractEnv):
             "lanes_count": 3,
             "initial_lane_id": None,
             "speed_limit": 33,
-            "duration": 40,  # [s]
-            "simulation_frequency": 120,  # [Hz] This defines how many frames per step get simulated so it can be seen on the graphical representation
+            "duration": 60,  # [s]
+            "simulation_frequency": 60,  # [Hz] This defines how many frames per step get simulated so it can be seen on the graphical representation
             "policy_frequency": 1,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
@@ -53,7 +53,7 @@ class MAHighwayEnv(AbstractEnv):
             "screen_height": 150, 
             "centering_position": [0.3, 0.5], 
             "scaling": 5.0,
-            "vehicles_density": 1,
+            "vehicles_density": 1.2,
             "normalization_range": [-100, 4],
                     "DLC_config": {
                         "count": 8,
@@ -76,6 +76,7 @@ class MAHighwayEnv(AbstractEnv):
     def _reset(self) -> None:
         self.vehicles_speed = []
         self.vehicles_position = []
+        self.vehicles_position_se = []
         self.vehicle_crashed = 0
         self._create_road()
         self._create_vehicles()
@@ -93,10 +94,6 @@ class MAHighwayEnv(AbstractEnv):
         for i in range(len(self.controlled_vehicles)):
             self.step_vehicles_speed.append(round(self.controlled_vehicles[i].speed,2))
             self.step_vehicles_position.append(round(self.controlled_vehicles[i].position[0],2))
-            if len(self.step_arrival_time) != 0:
-                self.step_arrival_time.append(0)
-            if len(self.step_in_target_lane) != 0:
-                self.step_in_target_lane.append(0)  
 
         self.vehicles_position.append(self.step_vehicles_position)
         self.vehicles_speed.append(self.step_vehicles_speed)
@@ -105,9 +102,10 @@ class MAHighwayEnv(AbstractEnv):
         self.avg_mlc_speed = sum([self.step_vehicles_speed[mlc] for mlc in range(len(self.step_vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.step_vehicles_speed)/2)
         self.avg_dlc_speed = sum([self.step_vehicles_speed[dlc] for dlc in range(1,len(self.step_vehicles_speed),2)])/(len(self.step_vehicles_speed)/2)
     
+        
         for i in range(len(self.controlled_vehicles)):
             self.step_arrival_time.append(0)
-            self.step_in_target_lane.append(0)
+            self.step_in_target_lane.append(0) 
 
     def _create_road(self) -> None:
         """Create a road composed of straight adjacent lanes."""
@@ -275,23 +273,18 @@ class MAHighwayEnv(AbstractEnv):
         
         info = {
             "elapsed_time|timestep": self.steps,
-            "avg_speed": "{:.2f}".format(self.avg_speed),
-            "avg_dlc_speed": "{:.2f}".format(self.avg_dlc_speed),
-            "avg_mlc_speed": "{:.2f}".format(self.avg_mlc_speed),
+            "avg_speed": self.avg_speed,
+            "avg_dlc_speed": self.avg_dlc_speed,
+            "avg_mlc_speed": self.avg_mlc_speed,
             "vehicles_speed": self.step_vehicles_speed,
             "vehicles_position": self.step_vehicles_position,
             "crashed": self.vehicle_crashed,
-            "arrival_time": self.step_arrival_time, 
+            "dlc_arrival_time": self.step_arrival_time, 
             "mlc_in_target_lane": self.step_in_target_lane,
-            "dlc_destination_complete=": self.all_dlc_destination_complete,
-            "percentage_in_target_lane": "{:.2f}".format(self.percentage_in_target),
+            "dlc_destination_complete": self.all_dlc_destination_complete,
+            "vehicle_position_per_se": self.vehicles_position_se
         }
         
-        try:
-            info["rewards"] = self._rewards(action)
-
-        except NotImplementedError:
-            pass 
         return info
 
                 
@@ -303,8 +296,9 @@ class MAHighwayEnv(AbstractEnv):
             
             if self.controlled_vehicles[i].crashed:
                 self.vehicle_crashed = 1
-                return 1
-            if not self.controlled_vehicles[1].on_road:
+                return 1    
+            
+        if not self.controlled_vehicles[0].on_road:
                 return 1
 
         return False
