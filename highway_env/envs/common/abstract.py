@@ -262,11 +262,11 @@ class AbstractEnv(gym.Env):
                 if self.controlled_vehicles[i].position[0] > 1000 and self.step_arrival_time[i] == 0:
                     self.step_arrival_time[i] = self.time
                 #check if vehicle is in bottom-most lane
-                if self.controlled_vehicles[i].position[1] > 7:
-                    self.step_in_target_lane[i] = 1
+                if self.controlled_vehicles[i].position[1] > 7 and self.step_in_target_lane[i] == 0:
+                    self.step_in_target_lane[i] = self.time
             
-            #I have to fix this one
-            self.percentage_in_target = (len([1 for i in self.step_arrival_time if i !=  0]))/(len(self.controlled_vehicles)/2)
+            #fill vehicle position per simulation step
+            self.vehicles_position_se.append(self.step_vehicles_position)
 
             #check if the first DLC vehicle arrived to destination
             if self.step_vehicles_position[1] > 1000:
