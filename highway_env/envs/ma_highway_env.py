@@ -39,7 +39,7 @@ class MAHighwayEnv(AbstractEnv):
                     "action_config": {
                         "type": "DiscreteMetaAction",
             }},
-            "human_driver_type": "highway_env.vehicle.behavior.IDMVehicle",
+            "human_vehicle_type": "highway_env.vehicle.behavior.IDMVehicle",
             "human_count": 0,
             "lanes_count": 3,
             "initial_lane_id": None,
@@ -56,12 +56,12 @@ class MAHighwayEnv(AbstractEnv):
             "vehicles_density": 1.2,
             "normalization_range": [-100, 4],
                     "DLC_config": {
-                        "count": 8,
+                        "count": 12,
                         "reward_speed_range": [23, 28], #speed range should be bellow target speed > 28.
                         "weights": [1,133,1,1,2,1],
                             },
                     "MLC_config": {
-                        "count": 8,
+                        "count": 12,
                         "reward_speed_range": [19, 23],
                         "weights": [1,133,1,1,1,2],
                             },
@@ -91,9 +91,9 @@ class MAHighwayEnv(AbstractEnv):
         self.avg_mlc_speed = 0
         self.avg_dlc_speed = 0
 
-        for i in range(len(self.controlled_vehicles)):
-            self.step_vehicles_speed.append(round(self.controlled_vehicles[i].speed,2))
-            self.step_vehicles_position.append(round(self.controlled_vehicles[i].position[0],2))
+        for i in range(len(self.road.vehicles)):
+            self.step_vehicles_speed.append(round(self.road.vehicles[i].speed,2))
+            self.step_vehicles_position.append(round(self.road.vehicles[i].position[0],2))
 
         self.vehicles_position.append(self.step_vehicles_position)
         self.vehicles_speed.append(self.step_vehicles_speed)
@@ -103,7 +103,7 @@ class MAHighwayEnv(AbstractEnv):
         self.avg_dlc_speed = sum([self.step_vehicles_speed[dlc] for dlc in range(1,len(self.step_vehicles_speed),2)])/(len(self.step_vehicles_speed)/2)
     
         
-        for i in range(len(self.controlled_vehicles)):
+        for i in range(len(self.road.vehicles)):
             self.step_arrival_time.append(0)
             self.step_in_target_lane.append(0) 
 
@@ -123,9 +123,9 @@ class MAHighwayEnv(AbstractEnv):
 
         #HUMAN DRIVERS ARE NOT FULLY IMPLEMENTED YET
         if human_count > 0:
-                type_one_per_type_two = near_split(dlc_count, num_bins=human_count)
+                type_one_per_type_two = [human_count]
                 vehicle_type_one = utils.class_from_path(controlled_vehicle_types[1])
-                human_vehicle = utils.class_from_path(self.config["human_driver_type"])
+                human_vehicle = utils.class_from_path(self.config["human_vehicle_type"])
         else:
             type_one_per_type_two = near_split(dlc_count, num_bins=mlc_count)
 
@@ -142,17 +142,19 @@ class MAHighwayEnv(AbstractEnv):
             self.controlled_vehicles.append(vehicle)
             self.road.vehicles.append(vehicle)
 
-            if human_count >= 1:
-                vehicle = human_vehicle.create_random(self.road, spacing=1 / self.config["vehicles_density"])
-                vehicle.randomize_behavior()
-                self.road.vehicles.append(vehicle)
-            else:
-                for _ in range(others):
+            for _ in range(others): #crea two
+                if human_count >= 1:
+                    vehicle = human_vehicle.create_random(
+                        self.road, 
+                        spacing=1 / self.config["vehicles_density"])
+                    vehicle.randomize_behavior()
+                    self.road.vehicles.append(vehicle)
+                else:
                     vehicle = vehicle_type_two.create_random(
                         self.road,
                         lane_id=self.config["initial_lane_id"],
                         spacing=self.config["ego_spacing"],
-                    )
+                        )
 
                     self.controlled_vehicles.append(vehicle)
                     self.road.vehicles.append(vehicle)
@@ -176,20 +178,23 @@ class MAHighwayEnv(AbstractEnv):
         :param action: the last action performed
         :return: the corresponding reward
         """
-        rewards = self._rewards(action)
-        vehicles_rewards = []
-        vehicle_id = 0
-        for vehicle in rewards:
-            sumReward = 0
-            for key in vehicle:
-                sumReward += vehicle[key][0] * vehicle[key][1]
-            if self.config["normalize_reward"]:
-                sumReward = utils.lmap(sumReward, self.config["normalization_range"], [0, 1])
-            total_reward = sumReward * float(self.controlled_vehicles[vehicle_id].on_road)
-            vehicles_rewards.append(total_reward)
-            vehicle_id += 1
-        average_reward = np.average(vehicles_rewards)
-        return average_reward
+
+        if self.config["human_count"] == 0:
+            rewards = self._rewards(action)
+            vehicles_rewards = []
+            vehicle_id = 0
+            for vehicle in rewards:
+                sumReward = 0
+                for key in vehicle:
+                    sumReward += vehicle[key][0] * vehicle[key][1]
+                if self.config["normalize_reward"]:
+                    sumReward = utils.lmap(sumReward, self.config["normalization_range"], [0, 1])
+                total_reward = sumReward * float(self.controlled_vehicles[vehicle_id].on_road)
+                vehicles_rewards.append(total_reward)
+                vehicle_id += 1
+            average_reward = np.average(vehicles_rewards)
+            return average_reward
+        return 1
 
     def _rewards(self, action: Action) -> Dict[Text, float]:
         
@@ -292,14 +297,14 @@ class MAHighwayEnv(AbstractEnv):
         """
         The episode is over if any of the vehicle crashes or its outside of road
         """
-        for i in range(len(self.controlled_vehicles)):
+        for i in range(len(self.road.vehicles)):
             
-            if self.controlled_vehicles[i].crashed:
+            if self.road.vehicles[i].crashed:
                 self.vehicle_crashed = 1
                 return 1    
             
-        if not self.controlled_vehicles[0].on_road:
-                return 1
+        """if not self.road.vehicles[0].on_road:
+                return 1"""
 
         return False
 
