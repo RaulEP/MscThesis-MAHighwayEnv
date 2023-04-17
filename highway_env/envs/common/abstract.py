@@ -239,6 +239,7 @@ class AbstractEnv(gym.Env):
     def _simulate(self, action: Optional[Action] = None) -> None:
         """Perform several steps of simulation with constant action."""
         frames = int(self.config["simulation_frequency"] // self.config["policy_frequency"])
+        human_test = self.config['human_count'] > 0
 
         for frame in range(frames):
      
@@ -248,29 +249,34 @@ class AbstractEnv(gym.Env):
             self.step_vehicles_speed = []
             self.step_vehicles_position = []
 
-            for i in range(len(self.controlled_vehicles)):
-                self.step_vehicles_speed.append(round(self.controlled_vehicles[i].speed, 2))
-                self.step_vehicles_position.append(round(self.controlled_vehicles[i].position[0],2))  
+            for i in range(len(self.road.vehicles)):
+                self.step_vehicles_speed.append(round(self.road.vehicles[i].speed, 2))
+                self.step_vehicles_position.append(round(self.road.vehicles[i].position[0],2))  
 
-            self.avg_speed = sum(self.step_vehicles_speed)/len(self.step_vehicles_speed)
-            self.avg_mlc_speed = sum([self.step_vehicles_speed[mlc] for mlc in range(len(self.step_vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.step_vehicles_speed)/2)
-            self.avg_dlc_speed = sum([self.step_vehicles_speed[dlc] for dlc in range(1,len(self.step_vehicles_speed),2)])/(len(self.step_vehicles_speed)/2)
-
-            #position metrics ##MUST ANALYZE
-            for i in range(len(self.controlled_vehicles)):
-                #check if vehicle arrive to destination
-                if self.controlled_vehicles[i].position[0] > 1000 and self.step_arrival_time[i] == 0:
+                if self.road.vehicles[i].position[0] > 1000 and self.step_arrival_time[i] == 0:
                     self.step_arrival_time[i] = self.time
-                #check if vehicle is in bottom-most lane
-                if self.controlled_vehicles[i].position[1] > 7 and self.step_in_target_lane[i] == 0:
-                    self.step_in_target_lane[i] = self.time
-            
+
             #fill vehicle position per simulation step
             self.vehicles_position_se.append(self.step_vehicles_position)
 
-            #check if the first DLC vehicle arrived to destination
-            if self.step_vehicles_position[1] > 1000:
-                self.all_dlc_destination_complete = 1
+            #calculate avg speed
+            self.avg_speed = sum(self.step_vehicles_speed)/len(self.step_vehicles_speed)
+
+            if human_test == False:
+                self.avg_mlc_speed = sum([self.step_vehicles_speed[mlc] for mlc in range(len(self.step_vehicles_speed)) if mlc % 2 == 0 or mlc == 0])/(len(self.step_vehicles_speed)/2)
+                self.avg_dlc_speed = sum([self.step_vehicles_speed[dlc] for dlc in range(1,len(self.step_vehicles_speed),2)])/(len(self.step_vehicles_speed)/2)
+
+                #check if the first DLC vehicle arrived to destination
+                if self.step_vehicles_position[1] > 1000:
+                    self.all_dlc_destination_complete = 1
+                
+                for i in range(len(self.road.vehicles)):
+
+                    #check if vehicle is in bottom-most lane
+                    if self.road.vehicles[i].position[1] > 7 and self.step_in_target_lane[i] == 0:
+                        self.step_in_target_lane[i] = self.time
+                
+              
 
             # Forward action to the vehicle
             if action is not None \
