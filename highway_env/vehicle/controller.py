@@ -154,6 +154,7 @@ class ControlledVehicle(Vehicle):
         """
         #source = Acceleration-Deceleration Behaviour of Various Vehicle Types P.S.Bokare a, A.K.Maurya b at 2017       
         
+        """
         #maximum acceleration rate of petrol vehicle
         max_threshold = 2.87
         #max mean acceleration rate of petrol vehicle
@@ -171,6 +172,8 @@ class ControlledVehicle(Vehicle):
             return safe_threshold
         else:
             return acceleration
+        """
+        return self.KP_A * (target_speed - self.speed)
         
     def get_routes_at_intersection(self) -> List[Route]:
         """Get the list of routes that can be followed at the next intersection."""

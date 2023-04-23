@@ -33,7 +33,7 @@ class MAHighwayEnv(AbstractEnv):
                 "observation_config": {
                     "type": "Kinematics",
                     "normalize": True,
-                    "features": ["x", "y", "vx", "vy"]}},
+                    "features": ["x", "y", "vx", "vy", "vtype"]}},
             "action": {
                     "type": "MultiAgentAction",
                     "action_config": {
@@ -44,7 +44,7 @@ class MAHighwayEnv(AbstractEnv):
             "lanes_count": 3,
             "initial_lane_id": None,
             "speed_limit": 33,
-            "duration": 60,  # [s]
+            "duration": 40,  # [s]
             "simulation_frequency": 60,  # [Hz] This defines how many frames per step get simulated so it can be seen on the graphical representation
             "policy_frequency": 1,  # [Hz]
             "ego_spacing": 1,
@@ -56,12 +56,12 @@ class MAHighwayEnv(AbstractEnv):
             "vehicles_density": 1.2,
             "normalization_range": [-100, 4],
                     "DLC_config": {
-                        "count": 12,
+                        "count": 8,
                         "reward_speed_range": [23, 28], #speed range should be bellow target speed > 28.
                         "weights": [1,133,1,1,2,1],
                             },
                     "MLC_config": {
-                        "count": 12,
+                        "count": 8,
                         "reward_speed_range": [19, 23],
                         "weights": [1,133,1,1,1,2],
                             },
@@ -303,10 +303,9 @@ class MAHighwayEnv(AbstractEnv):
                 self.vehicle_crashed = 1
                 return 1    
             
-        """if not self.road.vehicles[0].on_road:
-                return 1"""
+        if not self.road.vehicles[0].on_road:
+            return 1
 
-        return False
 
     def _is_truncated(self) -> bool:
         """The episode is over if the ego vehicle crashed or the time is out."""
