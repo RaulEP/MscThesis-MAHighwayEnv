@@ -33,7 +33,7 @@ class MAHighwayEnv(AbstractEnv):
                 "observation_config": {
                     "type": "Kinematics",
                     "normalize": True,
-                    "features": ["x", "y", "vx", "vy", "vtype"]}},
+                    "features": ["x", "y", "vx", "vy"]}},
             "action": {
                     "type": "MultiAgentAction",
                     "action_config": {
@@ -46,14 +46,14 @@ class MAHighwayEnv(AbstractEnv):
             "speed_limit": 33,
             "duration": 40,  # [s]
             "simulation_frequency": 60,  # [Hz] This defines how many frames per step get simulated so it can be seen on the graphical representation
-            "policy_frequency": 1,  # [Hz]
+            "policy_frequency": 4,  # [Hz]
             "ego_spacing": 1,
             "road_length": 1000,
             "screen_width": 1500, 
             "screen_height": 150, 
             "centering_position": [0.3, 0.5], 
             "scaling": 5.0,
-            "vehicles_density": 1.2,
+            "vehicles_density": 1,
             "normalization_range": [-100, 4],
                     "DLC_config": {
                         "count": 8,
@@ -277,7 +277,7 @@ class MAHighwayEnv(AbstractEnv):
     def _info(self, obs: Observation, action: Action) -> dict:
         
         info = {
-            "elapsed_time|timestep": self.steps,
+            "elapsed_time|timestep": self.time,
             "avg_speed": self.avg_speed,
             "avg_dlc_speed": self.avg_dlc_speed,
             "avg_mlc_speed": self.avg_mlc_speed,
@@ -297,15 +297,11 @@ class MAHighwayEnv(AbstractEnv):
         """
         The episode is over if any of the vehicle crashes or its outside of road
         """
-        for i in range(len(self.road.vehicles)):
-            
-            if self.road.vehicles[i].crashed:
-                self.vehicle_crashed = 1
-                return 1    
-            
-        if not self.road.vehicles[0].on_road:
-            return 1
-
+        for i in range(len(self.controlled_vehicles)):
+            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[i].on_road:
+                self.vehicle_crashed = True
+                return True
+        return False
 
     def _is_truncated(self) -> bool:
         """The episode is over if the ego vehicle crashed or the time is out."""

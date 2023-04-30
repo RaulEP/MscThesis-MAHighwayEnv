@@ -242,9 +242,6 @@ class AbstractEnv(gym.Env):
         human_test = self.config['human_count'] > 0
 
         for frame in range(frames):
-     
-            self.road.act()
-            self.road.step(1 / self.config["simulation_frequency"])
 
             self.step_vehicles_speed = []
             self.step_vehicles_position = []
@@ -284,12 +281,16 @@ class AbstractEnv(gym.Env):
                     and self.steps % int(self.config["simulation_frequency"] // self.config["policy_frequency"]) == 0:
                 self.action_type.act(action)
 
+            self.road.act()
+            self.road.step(1 / self.config["simulation_frequency"])
+            self.steps += 1 #this is insde the car loop
+
             # Automatically render intermediate simulation steps if a viewer has been launched
             # Ignored if the rendering is done offscreen
             if frame < frames - 1:  # Last frame will be rendered through env.render() as usual
                 self._automatic_rendering()
 
-        self.steps += 1
+        
         self.vehicles_position.append(self.step_vehicles_position)
         self.vehicles_speed.append(self.step_vehicles_speed)
         self.enable_auto_render = False
