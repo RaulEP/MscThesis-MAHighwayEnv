@@ -243,6 +243,16 @@ class AbstractEnv(gym.Env):
 
         for frame in range(frames):
 
+                        # Forward action to the vehicle
+            if action is not None \
+                    and not self.config["manual_control"] \
+                    and self.steps % int(self.config["simulation_frequency"] // self.config["policy_frequency"]) == 0:
+                self.action_type.act(action)
+
+            self.road.act()
+            self.road.step(1 / self.config["simulation_frequency"])
+            self.steps += 1 #this is insde the car loop
+
             self.step_vehicles_speed = []
             self.step_vehicles_position = []
 
@@ -252,9 +262,6 @@ class AbstractEnv(gym.Env):
 
                 if self.road.vehicles[i].position[0] > 1000 and self.step_arrival_time[i] == 0:
                     self.step_arrival_time[i] = self.time
-
-            #fill vehicle position per simulation step
-            self.vehicles_position_se.append(self.step_vehicles_position)
 
             #calculate avg speed
             self.avg_speed = sum(self.step_vehicles_speed)/len(self.step_vehicles_speed)
@@ -272,18 +279,6 @@ class AbstractEnv(gym.Env):
                     #check if vehicle is in bottom-most lane
                     if self.road.vehicles[i].position[1] > 7 and self.step_in_target_lane[i] == 0:
                         self.step_in_target_lane[i] = self.time
-                
-              
-
-            # Forward action to the vehicle
-            if action is not None \
-                    and not self.config["manual_control"] \
-                    and self.steps % int(self.config["simulation_frequency"] // self.config["policy_frequency"]) == 0:
-                self.action_type.act(action)
-
-            self.road.act()
-            self.road.step(1 / self.config["simulation_frequency"])
-            self.steps += 1 #this is insde the car loop
 
             # Automatically render intermediate simulation steps if a viewer has been launched
             # Ignored if the rendering is done offscreen
