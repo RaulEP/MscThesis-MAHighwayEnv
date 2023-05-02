@@ -155,7 +155,7 @@ class ControlledVehicle(Vehicle):
         #source = Acceleration-Deceleration Behaviour of Various Vehicle Types P.S.Bokare a, A.K.Maurya b at 2017       
         
         
-        #maximum acceleration rate of petrol vehicle with a policy freuency of 4
+        #maximum acceleration rate of petrol vehicle with a policy frequency of 4
         max_threshold = 2.87 / 4 
         #max mean acceleration rate of petrol vehicle
         mean_threshold =  0.82 / 4 
