@@ -58,12 +58,12 @@ class MAHighwayEnv(AbstractEnv):
                     "DLC_config": {
                         "count": 8,
                         "reward_speed_range": [23, 28], #speed range should be bellow target speed > 28.
-                        "weights": [1,180,1,1,2,3],
+                        "weights": [1,133,1,1,2,1],
                             },
                     "MLC_config": {
                         "count": 8,
                         "reward_speed_range": [19, 23],
-                        "weights": [1,180,1,1,2,3],
+                        "weights": [1,133,1,1,1,2],
                             },
 
             "normalize_reward": False,
@@ -223,13 +223,9 @@ class MAHighwayEnv(AbstractEnv):
                         proactive_mlc_reward = -self.controlled_vehicles[vehicle_id].position[0]/self.config["road_length"]
                         target_lane_reward = 0
                     
-
-                    if self.controlled_vehicles[vehicle_id].speed < self.controlled_vehicles[vehicle_id].MIN_SPEED:
-                        speed_reward = -1
-                    else:
-                        forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
-                        scaled_speed = utils.lmap(forward_speed, self.config["MLC_config"]["reward_speed_range"], [0, 1])
-                        speed_reward = np.clip(scaled_speed, 0, 1)
+                    forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
+                    scaled_speed = utils.lmap(forward_speed, self.config["MLC_config"]["reward_speed_range"], [0, 1])
+                    speed_reward = np.clip(scaled_speed, 0, 1)
                     
                     # Use forward speed rather than speed, see https://github.com/eleurent/highway-env/issues/268
                     controlled_vehicle_rewards.append(
@@ -257,12 +253,10 @@ class MAHighwayEnv(AbstractEnv):
                     else:
                         finish_road_reward = self.controlled_vehicles[vehicle_id].destination[0]/1000
                     
-                    if self.controlled_vehicles[vehicle_id].speed < self.controlled_vehicles[vehicle_id].MIN_SPEED:
-                        speed_reward = -1
-                    else:
-                        forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
-                        scaled_speed = utils.lmap(forward_speed, self.config["MLC_config"]["reward_speed_range"], [0, 1])
-                        speed_reward = np.clip(scaled_speed, 0, 1)
+
+                    forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
+                    scaled_speed = utils.lmap(forward_speed, self.config["MLC_config"]["reward_speed_range"], [0, 1])
+                    speed_reward = np.clip(scaled_speed, 0, 1)
 
                     """        #ANALYZE THIS    
                     forward_speed = self.controlled_vehicles[vehicle_id].speed * np.cos(self.controlled_vehicles[vehicle_id].heading)
@@ -308,7 +302,7 @@ class MAHighwayEnv(AbstractEnv):
         The episode is over if any of the vehicle crashes or its outside of road
         """
         for i in range(len(self.controlled_vehicles)):
-            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[i].on_road:
+            if self.controlled_vehicles[i].crashed or not self.controlled_vehicles[1].on_road:
                 self.vehicle_crashed = True
                 return True
         return False
